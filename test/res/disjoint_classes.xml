@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<rdf:RDF
+    xml:base="http://example.org/ontology#"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#">
+
+    <owl:Class rdf:about="#Person"/>
+    <owl:Class rdf:about="#Organization">
+        <owl:disjointWith
+            rdf:resource="#Person"/>
+    </owl:Class>
+
+    <rdf:Description rdf:about="#Alice">
+        <rdf:type rdf:resource="#Person"/>
+    </rdf:Description>
+
+    <rdf:Description rdf:about="#Alice">
+        <rdf:type rdf:resource="#Organization"/>
+    </rdf:Description>
+
+    <owl:Class rdf:about="#Animal"/>
+    <owl:Class rdf:about="#Robot"/>
+    <owl:Class rdf:about="#Human"/>
+
+    <owl:AllDisjointClasses>
+        <owl:members rdf:parseType="Collection">
+            <owl:Class rdf:about="#Animal"/>
+            <owl:Class rdf:about="#Robot"/>
+            <owl:Class rdf:about="#Human"/>
+        </owl:members>
+    </owl:AllDisjointClasses>
+
+</rdf:RDF>
+

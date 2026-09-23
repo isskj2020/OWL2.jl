@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<rdf:RDF
+    xml:base="http://example.com/ontology#"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:ex="http://example.com/ontology#">
+
+    <owl:ObjectProperty rdf:about="#hasMother">
+        <rdfs:subPropertyOf rdf:resource="#hasParent"/>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasParent"/>
+
+    <rdf:Description rdf:about="#Alice">
+        <ex:hasMother rdf:resource="#Carol"/>
+    </rdf:Description>
+
+    <owl:DatatypeProperty rdf:about="#hasMobilePhoneNumber">
+        <rdfs:subPropertyOf rdf:resource="#hasPhoneNumber"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="#hasPhoneNumber">
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    </owl:DatatypeProperty>
+
+</rdf:RDF>
+

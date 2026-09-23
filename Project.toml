@@ -1,0 +1,12 @@
+name = "OWL2"
+uuid = "94620844-3343-4c1e-8f60-b38b8b1f93a6"
+version = "0.1.0"
+authors = ["Issei.K <kaji.issei2020@gmail.com>"]
+
+[deps]
+CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
+PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
+
+[compat]
+CondaPkg = "0.2.36"
+PythonCall = "0.9.36"

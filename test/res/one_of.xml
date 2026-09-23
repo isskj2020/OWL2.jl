@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF
+    xml:base="http://example.com/ontology#"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#">
+
+  <rdf:Description rdf:about="#TrafficColor">
+    <rdf:type rdf:resource="http://www.w3.org/2000/01/rdf-schema#Datatype"/>
+
+    <owl:oneOf>
+      <rdf:Description>
+        <rdf:first
+            rdf:datatype="http://www.w3.org/2001/XMLSchema#string">red</rdf:first>
+
+        <rdf:rest>
+          <rdf:Description>
+            <rdf:first
+                rdf:datatype="http://www.w3.org/2001/XMLSchema#string">green</rdf:first>
+
+            <rdf:rest
+                rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
+          </rdf:Description>
+        </rdf:rest>
+
+      </rdf:Description>
+    </owl:oneOf>
+
+  </rdf:Description>
+
+</rdf:RDF>
+

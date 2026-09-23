@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF
+    xml:base="http://example.com/ontology#"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#">
+
+    <owl:Class rdf:about="#Person">
+        <owl:hasKey rdf:parseType="Collection">
+            <rdf:Description rdf:about="#hasPassport"/>
+            <rdf:Description rdf:about="#age"/>
+        </owl:hasKey>
+    </owl:Class>
+
+    <owl:ObjectProperty rdf:about="#hasPassport"/>
+    <owl:DatatypeProperty rdf:about="#age"/>
+
+</rdf:RDF>
+

@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<rdf:RDF
+    xml:base="http://example.org/ontology#"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#">
+
+    <owl:ObjectProperty rdf:about="#hasParent">
+        <owl:equivalentProperty rdf:resource="#parentOf"/>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#parentOf"/>
+
+    <rdf:Description rdf:about="#Alice">
+        <ex:hasParent rdf:resource="#Bob"/>
+    </rdf:Description>
+
+    <owl:DatatypeProperty rdf:about="#hasAge">
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#integer"/>
+        <owl:equivalentProperty rdf:resource="#ageInYears"/>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="#ageInYears">
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#integer"/>
+    </owl:DatatypeProperty>
+
+</rdf:RDF>
+

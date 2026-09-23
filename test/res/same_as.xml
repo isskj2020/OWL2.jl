@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF
+    xml:base="http://example.com/ontology#"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#">
+
+    <rdf:Description rdf:about="#Alice">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+        <owl:sameAs rdf:resource="#Alicia"/>
+    </rdf:Description>
+    <rdf:Description rdf:about="#Alicia">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#NamedIndividual"/>
+    </rdf:Description>
+
+    <owl:NamedIndividual rdf:about="#Bob">
+        <owl:sameAs rdf:resource="#Bobby"/>
+    </owl:NamedIndividual>
+    <owl:NamedIndividual rdf:about="#Bobby"/>
+
+    <rdf:Description rdf:about="#item-1">
+        <owl:sameAs rdf:resource="#item-101"/>
+        <owl:sameAs rdf:resource="#item-102"/>
+    </rdf:Description>
+
+
+</rdf:RDF>
+

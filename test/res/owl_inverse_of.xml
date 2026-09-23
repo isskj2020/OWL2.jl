@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF
+    xml:base="http://example.com/ontology#"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#">
+
+    <owl:ObjectProperty rdf:about="#hasEmployee">
+        <owl:inverseOf rdf:resource="#isOwner"/>
+        <rdfs:subPropertyOf rdf:nodeID="#inverseIsOwner"/>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#isOwner"/>
+
+    <rdf:Description rdf:nodeID="#inverseIsOwner">
+        <owl:inverseOf rdf:resource="#isOwner"/>
+    </rdf:Description>
+
+</rdf:RDF>
+

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF
+    xml:base="http://example.com/ontology#"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#">
+
+  <rdf:Description rdf:about="#NonHuman">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <owl:complementOf rdf:resource="#Human"/>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="#NonHumanOrRobot">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <owl:complementOf>
+      <owl:Class>
+        <owl:unionOf rdf:parseType="Collection">
+          <rdf:Description rdf:about="#Human"/>
+          <rdf:Description rdf:about="#Robot"/>
+        </owl:unionOf>
+      </owl:Class>
+    </owl:complementOf>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="#NonInteger">
+    <rdf:type rdf:resource="http://www.w3.org/2000/01/rdf-schema#Datatype"/>
+    <owl:datatypeComplementOf
+        rdf:resource="http://www.w3.org/2001/XMLSchema#integer"/>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="#NonRedOrGreen">
+    <rdf:type rdf:resource="http://www.w3.org/2000/01/rdf-schema#Datatype"/>
+    <owl:datatypeComplementOf>
+      <rdfs:Datatype>
+        <owl:oneOf rdf:parseType="Collection">
+          <rdf:Description>
+            <rdf:value>red</rdf:value>
+          </rdf:Description>
+          <rdf:Description>
+            <rdf:value>green</rdf:value>
+          </rdf:Description>
+        </owl:oneOf>
+      </rdfs:Datatype>
+    </owl:datatypeComplementOf>
+  </rdf:Description>
+
+</rdf:RDF>
+

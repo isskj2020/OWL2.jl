@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF
+    xml:base="http://example.com/ontology#"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#">
+
+    <owl:AllDifferent>
+        <owl:members rdf:parseType="Collection">
+            <rdf:Description rdf:about="#Alpha"/>
+            <rdf:Description rdf:about="#Bravo"/>
+            <rdf:Description rdf:about="#Charlie"/>
+        </owl:members>
+    </owl:AllDifferent>
+
+    <owl:AllDifferent>
+        <owl:distinctMembers rdf:parseType="Collection">
+            <rdf:Description rdf:about="#Delta"/>
+            <rdf:Description rdf:about="#Echo"/>
+            <rdf:Description rdf:about="#Foxtrot"/>
+        </owl:distinctMembers>
+    </owl:AllDifferent>
+
+</rdf:RDF>
+
