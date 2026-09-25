@@ -553,7 +553,7 @@ end
 add_ntps!(tps, x::DataPropertyRange, parent) = begin
     s = add_ntps!(tps, x.dpe, parent)
     p = TERM_RDFS_RANGE
-    o = add_ntps!(tps, x.ce, parent)
+    o = add_ntps!(tps, x.dr, parent)
     push!(tps, (s, p, o))
     return parent
 end
