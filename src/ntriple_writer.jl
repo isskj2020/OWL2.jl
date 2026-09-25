@@ -580,8 +580,14 @@ add_ntps!(tps, x::HasKey, parent) = begin
     p = TERM_OWL_HAS_KEY
     o = id
     push!(tps, (s, p, o))
-    list = merge(x.ope_n, x.dpe_n)
-    add_ntps!(tps, list, id2)
+    list = Vector()
+    for ope in x.ope_n
+        push!(list, ope)
+    end
+    for dpe in x.dpe_n
+        push!(list, dpe)
+    end
+    add_ntps!(tps, list, id)
 end
 
 add_ntps!(tps, x::SameIndividual, parent) = begin
