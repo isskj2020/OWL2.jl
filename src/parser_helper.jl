@@ -1,8 +1,11 @@
 find_owl_restriction_nodes(g::Graph, nodes::Vector{TripleID}) = filter(x -> x.p == term_id(g, TERM_RDF_TYPE) && x.o == term_id(g, TERM_OWL_RESTRICTION), nodes)
 find_owl_class_nodes(g::Graph, nodes::Vector{TripleID}) = filter(x -> x.p == term_id(g, TERM_RDF_TYPE) && x.o == term_id(g, TERM_OWL_CLASS), nodes)
+find_owl_datatype_nodes(g::Graph, nodes::Vector{TripleID}) = filter(x -> x.p == term_id(g, TERM_RDF_TYPE) && x.o == term_id(g, TERM_RDFS_DATATYPE), nodes)
 find_owl_on_class_nodes(g::Graph, nodes::Vector{TripleID}) = filter(x -> x.p == term_id(g, TERM_OWL_ON_CLASS), nodes)
 find_owl_on_property_nodes(g::Graph, nodes::Vector{TripleID}) = filter(x -> x.p == term_id(g, TERM_OWL_ON_PROPERTY), nodes)
+find_owl_on_properties_nodes(g::Graph, nodes::Vector{TripleID}) = filter(x -> x.p == term_id(g, TERM_OWL_ON_PROPERTIES), nodes)
 find_owl_on_data_range_nodes(g::Graph, nodes::Vector{TripleID}) = filter(x -> x.p == term_id(g, TERM_OWL_ON_DATA_RANGE), nodes)
+find_owl_on_datatype_ndoes(g::Graph, nodes::Vector{TripleID}) = filter(x -> x.p == term_id(g, TERM_OWL_ON_DATATYPE), nodes)
 find_rdf_first_nodes(g::Graph, nodes::Vector{TripleID}) = filter(x -> x.p == term_id(g, TERM_RDF_FIRST), nodes)
 find_rdf_rest_nodes(g::Graph, nodes::Vector{TripleID}) = filter(x -> x.p == term_id(g, TERM_RDF_REST), nodes)
 

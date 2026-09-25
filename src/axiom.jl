@@ -28,11 +28,6 @@ end
     x::String
 end
 
-
-@kwdef struct PlainLiteral
-    x::String
-end
-
 @kwdef struct NamedIndividual <: Individual
     x::String
 end
@@ -99,19 +94,19 @@ end
 @kwdef mutable struct ObjectMinCardinality <: CExpression
     n::UInt64
     ope::OPExpression
-    ce::CExpression
+    ce::Union{CExpression, Nothing} = nothing
 end
 
 @kwdef mutable struct ObjectMaxCardinality <: CExpression
     n::UInt64
     ope::OPExpression
-    ce::CExpression
+    ce::Union{CExpression, Nothing} = nothing
 end
 
 @kwdef mutable struct ObjectExactCardinality <: CExpression
     n::UInt64
     ope::OPExpression
-    ce::CExpression
+    ce::Union{CExpression, Nothing} = nothing
 end
 
 @kwdef mutable struct DataSomeValuesFrom <: CExpression
@@ -132,19 +127,19 @@ end
 @kwdef mutable struct DataMinCardinality <: CExpression
     n::UInt64
     dpe::DPExpression
-    dr::DataRange
+    dr::Union{DataRange, Nothing} = nothing
 end
 
 @kwdef mutable struct DataMaxCardinality <: CExpression
     n::UInt64
     dpe::DPExpression
-    dr::DataRange
+    dr::Union{DataRange, Nothing} = nothing
 end
 
 @kwdef mutable struct DataExactCardinality <: CExpression
     n::UInt64
     dpe::DPExpression
-    dr::DataRange
+    dr::Union{DataRange, Nothing} = nothing
 end
 
 @kwdef mutable struct DataIntersectionOf <: DataRange
@@ -160,13 +155,13 @@ end
 end
 
 @kwdef mutable struct DataOneOf <: DataRange
-    lt_n::Vector{PlainLiteral}
+    lt_n::Vector{String}
 end
 
 @kwdef mutable struct DataTypeRestriction <: DataRange
     dt::DataType
     f_n::Vector{String}
-    lt_n::Vector{PlainLiteral}
+    lt_n::Vector{String}
 end
 
 @kwdef mutable struct Annotation
@@ -218,12 +213,6 @@ end
     ope_n::Vector{OPExpression}
 end
 
-@kwdef mutable struct InverseObjectProperties <: ObjectPropertyAxiom
-    ann_n::Vector{Annotation} = []
-    ope1::OPExpression
-    ope2::OPExpression
-end
-
 @kwdef mutable struct ObjectPropertyDomain <: ObjectPropertyAxiom
     ann_n::Vector{Annotation} = []
     ope::OPExpression
@@ -234,6 +223,12 @@ end
     ann_n::Vector{Annotation} = []
     ope::OPExpression
     ce::CExpression
+end
+
+@kwdef mutable struct InverseObjectProperties <: ObjectPropertyAxiom
+    ann_n::Vector{Annotation} = []
+    ope1::OPExpression
+    ope2::OPExpression
 end
 
 @kwdef mutable struct FunctionalObjectProperty <: ObjectPropertyAxiom

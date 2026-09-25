@@ -11,10 +11,16 @@ Simple OWL2 type parser for Julia.
 ```julia
 using OWL2
 
+# load RDF/XML
 axioms = OWL2.load_owl("./sample.xml")
 for axiom in axioms
     @info axiom
 end
+
+# write it to N-triples.
+write_owl_nt(axioms, "./out.ttl")
+
+axioms = OWL2.load_owl("./out.ttl")
 ```
 
 ## Support axioms
@@ -28,51 +34,51 @@ end
 
 | Implemented | Tested | OWL 2 Functional-Style Syntax |
 |---|---|---|
-| [x] | [ ] | Declaration( Class( IRI ) ) |
-| [x] | [ ] | Declaration( Datatype( IRI ) ) |
-| [x] | [ ] | Declaration( ObjectProperty( IRI ) ) |
-| [x] | [ ] | Declaration( DataProperty( IRI ) ) |
-| [x] | [ ] | Declaration( AnnotationProperty( IRI ) ) |
-| [x] | [ ] | Declaration( NamedIndividual( IRI ) ) |
-| [x] | [ ] | SubClassOf( CE(x) CE(y) ) |
-| [x] | [ ] | EquivalentClasses( CE(x) CE(y) ) |
-| [x] | [ ] | DisjointClasses( CE(x) CE(y) ) |
-| [x] | [ ] | DisjointClasses( CE(y1) ... CE(yn) ) |
-| [x] | [ ] | DisjointUnion( CE(IRI) CE(y1) ... CE(yn) ) |
-| [x] | [ ] | SubObjectPropertyOf( OPE(x) OPE(y) ) |
-| [x] | [ ] | SubObjectPropertyOf( ObjectPropertyChain( OPE(y1) ... OPE(yn) ) OPE(x) ) |
-| [x] | [ ] | EquivalentObjectProperties( OPE(x) OPE(y) ) |
-| [x] | [ ] | DisjointObjectProperties( OPE(x) OPE(y) ) |
-| [x] | [ ] | DisjointObjectProperties( OPE(y1) ... OPE(yn) ) |
-| [x] | [ ] | ObjectPropertyDomain( OPE(x) CE(y) ) |
-| [x] | [ ] | ObjectPropertyRange( OPE(x) CE(y) ) |
-| [x] | [ ] | InverseObjectProperties( OPE(x) OPE(y) ) |
-| [x] | [ ] | FunctionalObjectProperty( OPE(x) ) |
-| [x] | [ ] | InverseFunctionalObjectProperty( OPE(x) ) |
-| [x] | [ ] | ReflexiveObjectProperty( OPE(x) ) |
-| [x] | [ ] | IrreflexiveObjectProperty( OPE(x) ) |
-| [x] | [ ] | SymmetricObjectProperty( OPE(x) ) |
-| [x] | [ ] | AsymmetricObjectProperty( OPE(x) ) |
-| [x] | [ ] | TransitiveObjectProperty( OPE(x) ) |
-| [x] | [ ] | SubDataPropertyOf( DPE(x) DPE(y) ) |
-| [x] | [ ] | EquivalentDataProperties( DPE(x) DPE(y) ) |
-| [x] | [ ] | DisjointDataProperties( DPE(x) DPE(y) ) |
-| [x] | [ ] | DisjointDataProperties( DPE(y1) ... DPE(yn) ) |
-| [x] | [ ] | DataPropertyDomain( DPE(x) CE(y) ) |
-| [x] | [ ] | DataPropertyRange( DPE(x) DR(y) ) |
-| [x] | [ ] | FunctionalDataProperty( DPE(x) ) |
-| [x] | [ ] | DatatypeDefinition( DR(IRI) DR(y) ) |
-| [x] | [ ] | HasKey( CE(x) ( OPE(z1) ... OPE(zm) ) ( DPE(w1) ... DPE(wn) ) ) |
-| [x] | [ ] | SameIndividual( x y ) |
-| [x] | [ ] | DifferentIndividuals( x y ) |
-| [x] | [ ] | DifferentIndividuals( x1 ... xn ) |
-| [x] | [ ] | ClassAssertion( CE(y) x ) |
-| [x] | [ ] | ObjectPropertyAssertion( OPE(IRI) x z ) |
-| [x] | [ ] | NegativeObjectPropertyAssertion( OPE(y) w z ) |
-| [x] | [ ] | DataPropertyAssertion( DPE(IRI) x lt ) |
-| [x] | [ ] | NegativeDataPropertyAssertion( DPE(y) w lt ) |
-| [x] | [ ] | AnnotationAssertion( owl:deprecated IRI "true"^^xsd:boolean ) |
-| [x] | [ ] | AnnotationAssertion( owl:deprecated IRI "true"^^xsd:boolean ) |
-| [x] | [ ] | SubAnnotationPropertyOf( AP(IRI) AP(IRI) ) |
-| [x] | [ ] | AnnotationPropertyDomain( AP(IRI) IRI ) |
-| [x] | [ ] | AnnotationPropertyRange( AP(IRI) IRI ) |
+| &check; | - | Declaration( Class( IRI ) ) |
+| &check; | - | Declaration( Datatype( IRI ) ) |
+| &check; | - | Declaration( ObjectProperty( IRI ) ) |
+| &check; | - | Declaration( DataProperty( IRI ) ) |
+| &check; | - | Declaration( AnnotationProperty( IRI ) ) |
+| &check; | - | Declaration( NamedIndividual( IRI ) ) |
+| &check; | - | SubClassOf( CE(x) CE(y) ) |
+| &check; | - | EquivalentClasses( CE(x) CE(y) ) |
+| &check; | - | DisjointClasses( CE(x) CE(y) ) |
+| &check; | - | DisjointClasses( CE(y1) ... CE(yn) ) |
+| &check; | - | DisjointUnion( CE(IRI) CE(y1) ... CE(yn) ) |
+| &check; | - | SubObjectPropertyOf( OPE(x) OPE(y) ) |
+| &check; | - | SubObjectPropertyOf( ObjectPropertyChain( OPE(y1) ... OPE(yn) ) OPE(x) ) |
+| &check; | - | EquivalentObjectProperties( OPE(x) OPE(y) ) |
+| &check; | - | DisjointObjectProperties( OPE(x) OPE(y) ) |
+| &check; | - | DisjointObjectProperties( OPE(y1) ... OPE(yn) ) |
+| &check; | - | ObjectPropertyDomain( OPE(x) CE(y) ) |
+| &check; | - | ObjectPropertyRange( OPE(x) CE(y) ) |
+| &check; | - | InverseObjectProperties( OPE(x) OPE(y) ) |
+| &check; | - | FunctionalObjectProperty( OPE(x) ) |
+| &check; | - | InverseFunctionalObjectProperty( OPE(x) ) |
+| &check; | - | ReflexiveObjectProperty( OPE(x) ) |
+| &check; | - | IrreflexiveObjectProperty( OPE(x) ) |
+| &check; | - | SymmetricObjectProperty( OPE(x) ) |
+| &check; | - | AsymmetricObjectProperty( OPE(x) ) |
+| &check; | - | TransitiveObjectProperty( OPE(x) ) |
+| &check; | - | SubDataPropertyOf( DPE(x) DPE(y) ) |
+| &check; | - | EquivalentDataProperties( DPE(x) DPE(y) ) |
+| &check; | - | DisjointDataProperties( DPE(x) DPE(y) ) |
+| &check; | - | DisjointDataProperties( DPE(y1) ... DPE(yn) ) |
+| &check; | - | DataPropertyDomain( DPE(x) CE(y) ) |
+| &check; | - | DataPropertyRange( DPE(x) DR(y) ) |
+| &check; | - | FunctionalDataProperty( DPE(x) ) |
+| &check; | - | DatatypeDefinition( DR(IRI) DR(y) ) |
+| &check; | - | HasKey( CE(x) ( OPE(z1) ... OPE(zm) ) ( DPE(w1) ... DPE(wn) ) ) |
+| &check; | - | SameIndividual( x y ) |
+| &check; | - | DifferentIndividuals( x y ) |
+| &check; | - | DifferentIndividuals( x1 ... xn ) |
+| &check; | - | ClassAssertion( CE(y) x ) |
+| &check; | - | ObjectPropertyAssertion( OPE(IRI) x z ) |
+| &check; | - | NegativeObjectPropertyAssertion( OPE(y) w z ) |
+| &check; | - | DataPropertyAssertion( DPE(IRI) x lt ) |
+| &check; | - | NegativeDataPropertyAssertion( DPE(y) w lt ) |
+| &check; | - | AnnotationAssertion( owl:deprecated IRI "true"^^xsd:boolean ) |
+| &check; | - | AnnotationAssertion( owl:deprecated IRI "true"^^xsd:boolean ) |
+| &check; | - | SubAnnotationPropertyOf( AP(IRI) AP(IRI) ) |
+| &check; | - | AnnotationPropertyDomain( AP(IRI) IRI ) |
+| &check; | - | AnnotationPropertyRange( AP(IRI) IRI ) |

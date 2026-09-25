@@ -15,6 +15,7 @@ function parse_class_expressions(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict
     parse_min_cardinality(g, decls, exprs, t)
     parse_min_qualified_cardinality(g, decls, exprs, t)
     parse_inverse_of(g, decls, exprs, t)
+    parse_with_restrictions(g, decls, exprs, t)
 end
 
 function parse_some_values_from(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, t::TripleID)
@@ -22,14 +23,34 @@ function parse_some_values_from(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{
     nodes = filter(x -> t.s == x.s, g.triples)
     @assert !isempty(find_owl_restriction_nodes(g, nodes))
 
-    prop = first(find_owl_on_property_nodes(g, nodes))
     if get(decls, t.o, nothing) isa CExpression
+        # object property
+        prop = first(find_owl_on_property_nodes(g, nodes))
         ope = ObjectProperty(g.names[prop.o])
         exprs[t.s] = ObjectSomeValuesFrom(ope = ope, ce = decls[t.o])
     else
-        dpe = DataProperty(g.names[prop.o])
+        # data property
+        prop = find_owl_on_property_nodes(g, nodes)
+        if isempty(prop)
+            prop = find_owl_on_properties_nodes(g, nodes)
+        end
+        if isempty(prop)
+            @warn "unkown triple format: $(string_triple(g, t))"
+            return
+        end
+        prop = first(prop)
+        dpe_n = Vector{DPExpression}()
+        if g.id_types[prop.o] == BNode
+            chain_ids = Vector{UInt64}()
+            parse_chain_list!(g, prop.o, chain_ids)
+            for id in chain_ids
+                push!(dpe_n, gen_datatype(g, id))
+            end
+        else
+            push!(dpe_n, DataProperty(g.names[prop.o]))
+        end
         dt = gen_datatype(g, t.o)
-        exprs[t.s] = DataSomeValuesFrom(dpe_n = [dpe], dr = dt)
+        exprs[t.s] = DataSomeValuesFrom(dpe_n = dpe_n, dr = dt)
     end
 end
 
@@ -41,12 +62,33 @@ function parse_all_values_from(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{U
     prop = first(find_owl_on_property_nodes(g, nodes))
 
     if get(decls, t.o, nothing) isa CExpression
+        # object property
+        prop = first(find_owl_on_property_nodes(g, nodes))
         ope = ObjectProperty(g.names[prop.o])
         exprs[t.s] = ObjectAllValuesFrom(ope = ope, ce = decls[t.o])
     else
-        dpe = DataProperty(g.names[prop.o])
+        # data property
+        prop = find_owl_on_property_nodes(g, nodes)
+        if isempty(prop)
+            prop = find_owl_on_properties_nodes(g, nodes)
+        end
+        if isempty(prop)
+            @warn "unkown triple format: $(string_triple(g, t))"
+            return
+        end
+        prop = first(prop)
+        dpe_n = Vector{DPExpression}()
+        if g.id_types[prop.o] == BNode
+            chain_ids = Vector{UInt64}()
+            parse_chain_list!(g, prop.o, chain_ids)
+            for id in chain_ids
+                push!(dpe_n, gen_datatype(g, id))
+            end
+        else
+            push!(dpe_n, DataProperty(g.names[prop.o]))
+        end
         dt = gen_datatype(g, t.o)
-        exprs[t.s] = DataAllValuesFrom(dpe_n = [dpe], dr = dt)
+        exprs[t.s] = DataAllValuesFrom(dpe_n = dpe_n, dr = dt)
     end
 end
 
@@ -100,7 +142,7 @@ function parse_union_of(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, 
             end
         end
         exprs[t.s] = ObjectUnionOf(ce_n = ce_n)
-    else
+    elseif !isempty(find_owl_datatype_nodes(g, nodes))
         # data union of
         dr_n = Vector{DataRange}()
         for n in nodes
@@ -157,13 +199,13 @@ function parse_one_of(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, An
         exprs[t.s] = ObjectOneOf(a_n = a_n)
     else
         # data one of
-        lt_n = Vector{PlainLiteral}()
+        lt_n = Vector{String}()
         for n in nodes
             if g.id_types[n.o] == BNode 
                 chain_ids = Vector{UInt64}()
                 parse_chain_list!(g, n.o, chain_ids)
                 for id in chain_ids
-                    push!(lt_n, PlainLiteral(g.names[id]))
+                    push!(lt_n, g.names[id])
                 end
             end
         end
@@ -180,7 +222,7 @@ function parse_has_value(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64,
     if g.id_types[t.o] == Literal
         # data has value 
         dpe = DataProperty(g.names[prop.o])
-        lt = PlainLiteral(g.names[t.o])
+        lt = g.names[t.o]
         exprs[t.s] = DataHasValue(dpe = dpe, lt = lt)
     else
         # object has value 
@@ -209,12 +251,16 @@ function parse_min_cardinality(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{U
     nodes = filter(x -> t.s == x.s, g.triples)
     @assert !isempty(find_owl_restriction_nodes(g, nodes))
 
-    prop = first(find_owl_on_property_nodes(g, nodes))
-
     n = match(r"^\\\"(.+)\\\"", g.names[t.o])[1] |> x -> parse(Int, x)
-    ope = ObjectProperty(g.names[prop.o])
-    ce = Class(TERM_OWL_THING)
-    exprs[t.s] = ObjectMinCardinality(n = n, ope = ope, ce = ce)
+
+    prop = get(decls, first(find_owl_on_property_nodes(g, nodes)).o, nothing)
+    if prop isa OPExpression
+        exprs[t.s] = ObjectMinCardinality(n = n, ope = prop)
+    elseif prop isa DPExpression
+        exprs[t.s] = DataMinCardinality(n = n, dpe = prop)
+    else
+        @warn "unknown property: $prop"
+    end
 end
 
 function parse_min_qualified_cardinality(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, t::TripleID)
@@ -228,7 +274,7 @@ function parse_min_qualified_cardinality(g::Graph, decls::Dict{UInt64, Any}, exp
 
     classes = find_owl_on_class_nodes(g, nodes)
     if !isempty(classes)
-        ce = gen_class(g, classes[1].o)
+        ce = gen_class(g, first(classes).o)
         ope = ObjectProperty(g.names[prop.o])
         exprs[t.s] = ObjectMinCardinality(n = n, ope = ope, ce = ce)
     end
@@ -246,12 +292,16 @@ function parse_max_cardinality(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{U
     nodes = filter(x -> t.s == x.s, g.triples)
     @assert !isempty(find_owl_restriction_nodes(g, nodes))
 
-    prop = first(find_owl_on_property_nodes(g, nodes))
-
     n = match(r"^\\\"(.+)\\\"", g.names[t.o])[1] |> x -> parse(Int, x)
-    ope = ObjectProperty(g.names[prop.o])
-    ce = Class(TERM_OWL_THING)
-    exprs[t.s] = ObjectMinCardinality(n = n, ope = ope, ce = ce)
+
+    prop = get(decls, first(find_owl_on_property_nodes(g, nodes)).o, nothing)
+    if prop isa OPExpression
+        exprs[t.s] = ObjectMaxCardinality(n = n, ope = prop)
+    elseif prop isa DPExpression
+        exprs[t.s] = DataMaxCardinality(n = n, dpe = prop)
+    else
+        @warn "unknown property: $prop"
+    end
 end
 
 function parse_max_qualified_cardinality(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, t::TripleID)
@@ -265,7 +315,7 @@ function parse_max_qualified_cardinality(g::Graph, decls::Dict{UInt64, Any}, exp
 
     classes = find_owl_on_class_nodes(g, nodes)
     if !isempty(classes)
-        ce = gen_class(g, classes[1].o)
+        ce = gen_class(g, first(classes).o)
         ope = ObjectProperty(g.names[prop.o])
         exprs[t.s] = ObjectMaxCardinality(n = n, ope = ope, ce = ce)
     end
@@ -283,12 +333,16 @@ function parse_exact_cardinality(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict
     nodes = filter(x -> t.s == x.s, g.triples)
     @assert !isempty(find_owl_restriction_nodes(g, nodes))
 
-    prop = first(find_owl_on_property_nodes(g, nodes))
-
     n = match(r"^\\\"(.+)\\\"", g.names[t.o])[1] |> x -> parse(Int, x)
-    ope = ObjectProperty(g.names[prop.o])
-    ce = Class(TERM_OWL_THING)
-    exprs[t.s] = ObjectExactCardinality(n = n, ope = ope, ce = ce)
+
+    prop = get(decls, first(find_owl_on_property_nodes(g, nodes)).o, nothing)
+    if prop isa OPExpression
+        exprs[t.s] = ObjectExactCardinality(n = n, ope = prop)
+    elseif prop isa DPExpression
+        exprs[t.s] = DataExactCardinality(n = n, dpe = prop)
+    else
+        @warn "unknown property: $prop"
+    end
 end
 
 function parse_exact_qualified_cardinality(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, t::TripleID)
@@ -324,3 +378,25 @@ function parse_inverse_of(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64
     end
 end
 
+function parse_with_restrictions(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, t::TripleID)
+    t.p != term_id(g, TERM_OWL_WITH_RESTRICTIONS) && return
+
+    nodes = filter(x -> t.s == x.s, g.triples)
+    datatypes = find_owl_on_datatype_nodes(g, nodes)
+    @assert !isempty(datatypes)
+
+    dt = gen_datatype(g, first(datatypes).o)
+
+    if g.id_types[t.o] == BNode
+        chain_ids = Vector{UInt64}()
+        parse_chain_list!(g, t.o, chain_ids)
+        f_n = Vector{String}()
+        lt_n = Vector{String}()
+        for id in chain_ids
+            t = g.triples[id]
+            push!(f_n, gt.names[t.p])
+            push!(lt_n, gt.names[t.o])
+        end
+        exprs[t.s] = DataTypeRestriction(dt = dt, f_n = f_n, lt_n = lt_n)
+    end
+end

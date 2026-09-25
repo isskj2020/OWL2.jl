@@ -14,7 +14,9 @@ include("parser_axiom.jl")
 include("normaliser_expr.jl")
 include("normaliser_axiom.jl")
 
-function load_owl(filepath::String)
+include("ntriple_writer.jl")
+
+function load_owl(filepath)
     rdflib = pyimport("rdflib")
     g = rdflib.Graph()
     g.parse(filepath)
@@ -26,6 +28,25 @@ function load_owl(filepath::String)
     PythonCall.GC.gc()
 
     return compose!(graph)
+end
+
+function to_triples(axioms::Vector{Axiom})
+    tps = Tuple[]
+    io = stdout
+    for a in axioms
+        add_triple!(tps, a)
+    end
+    unique!(tps)
+    return tps
+end
+
+function write_owl_nt(axioms, filepath)
+    tps = to_triples(axioms)
+    open(filepath, "w") do io
+        for t in tps
+            println(io, "$(t[1]) $(t[2]) $(t[3]) .")
+        end
+    end
 end
 
 end 

@@ -1,4 +1,4 @@
-using PythonCall
+using Random, PythonCall
 
 @enum TermType URIRef BNode Literal Variable
 
@@ -7,6 +7,7 @@ struct TripleID
     p::UInt64
     o::UInt64
 end
+
 
 struct Term
     x::String
@@ -23,6 +24,7 @@ end
 
 
 term_id(g::Graph, x::String) = get(g.ids, x, -1)
+blank_node_id() = "_:" * randstring(12)
 
 function string_triple(g::Graph, t::TripleID)
     return "$(g.names[t.s]) $(g.names[t.p]) $(g.names[t.o]) ."
