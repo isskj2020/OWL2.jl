@@ -76,6 +76,7 @@ const TERM_OWL_ALL_DIFFERENT = "<$TERM_OWL#AllDifferent>"
 const TERM_OWL_NEGATIVE_PROPERTY_ASSERTION = "<$TERM_OWL#NegativePropertyAssertion>"
 const TERM_OWL_SOURCE_INDIVIDUAL = "<$TERM_OWL#sourceIndividual>"
 const TERM_OWL_TARGET_INDIVIDUAL = "<$TERM_OWL#targetIndividual>"
+const TERM_OWL_TARGET_VALUE = "<$TERM_OWL#targetValue>"
 const TERM_OWL_ASSERTION_PROPERTY = "<$TERM_OWL#assertionProperty>"
 
 const TERM_OWL_DEPRECATED_CLASS = "<$TERM_OWL#DeprecatedClass>"

@@ -40,7 +40,7 @@ function parse_some_values_from(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{
         end
         prop = first(prop)
         dpe_n = Vector{DPExpression}()
-        if g.id_types[prop.o] == BNode
+        if is_b_node(g, prop.o)
             chain_ids = Vector{UInt64}()
             parse_chain_list!(g, prop.o, chain_ids)
             for id in chain_ids
@@ -78,7 +78,7 @@ function parse_all_values_from(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{U
         end
         prop = first(prop)
         dpe_n = Vector{DPExpression}()
-        if g.id_types[prop.o] == BNode
+        if is_b_node(g, prop.o)
             chain_ids = Vector{UInt64}()
             parse_chain_list!(g, prop.o, chain_ids)
             for id in chain_ids
@@ -100,7 +100,7 @@ function parse_intersection_of(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{U
         # object intersection of
         ce_n = Vector{CExpression}()
         for n in nodes
-            if g.id_types[n.o] == BNode
+            if is_b_node(g, n.o)
                 chain_ids = Vector{UInt64}()
                 parse_chain_list!(g, n.o, chain_ids)
                 for id in chain_ids
@@ -113,7 +113,7 @@ function parse_intersection_of(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{U
         # data intersection of
         dr_n = Vector{DataRange}()
         for n in nodes
-            if g.id_types[n.o] == BNode
+            if is_b_node(g, n.o)
                 chain_ids = Vector{UInt64}()
                 parse_chain_list!(g, n.o, chain_ids)
                 for id in chain_ids
@@ -133,7 +133,7 @@ function parse_union_of(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, 
         # object union of
         ce_n = Vector{CExpression}()
         for n in nodes
-            if g.id_types[n.o] == BNode
+            if is_b_node(g, n.o)
                 chain_ids = Vector{UInt64}()
                 parse_chain_list!(g, n.o, chain_ids)
                 for id in chain_ids
@@ -146,7 +146,7 @@ function parse_union_of(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, 
         # data union of
         dr_n = Vector{DataRange}()
         for n in nodes
-            if g.id_types[n.o] == BNode
+            if is_b_node(g, n.o)
                 chain_ids = Vector{UInt64}()
                 parse_chain_list!(g, n.o, chain_ids)
                 for id in chain_ids
@@ -183,11 +183,11 @@ function parse_one_of(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, An
         # object one of
         a_n = Vector{Individual}()
         for n in nodes
-            if g.id_types[n.o] == BNode
+            if is_b_node(g, n.o)
                 chain_ids = Vector{UInt64}()
                 parse_chain_list!(g, n.o, chain_ids)
                 for id in chain_ids
-                    a = if g.id_types[id] == BNode
+                    a = if is_b_node(g, id)
                         AnonymousIndividual(g.names[id])
                     else
                         NamedIndividual(g.names[id])
@@ -201,7 +201,7 @@ function parse_one_of(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, An
         # data one of
         lt_n = Vector{String}()
         for n in nodes
-            if g.id_types[n.o] == BNode 
+            if is_b_node(g, n.o)
                 chain_ids = Vector{UInt64}()
                 parse_chain_list!(g, n.o, chain_ids)
                 for id in chain_ids
@@ -219,7 +219,7 @@ function parse_has_value(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64,
     @assert !isempty(find_owl_restriction_nodes(g, nodes))
 
     prop = first(find_owl_on_property_nodes(g, nodes))
-    if g.id_types[t.o] == Literal
+    if is_literal(g, t.o)
         # data has value 
         dpe = DataProperty(g.names[prop.o])
         lt = g.names[t.o]
@@ -227,7 +227,7 @@ function parse_has_value(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64,
     else
         # object has value 
         ope = ObjectProperty(g.names[prop.o])
-        a = if g.id_types[t.o] == BNode
+        a = if is_b_node(g, t.o)
             AnonymousIndividual(g.names[t.o])
         else
             NamedIndividual(g.names[t.o])
@@ -372,7 +372,7 @@ end
 function parse_inverse_of(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, t::TripleID)
     t.p != term_id(g, TERM_OWL_INVERSE_OF) && return 
 
-    if g.id_types[t.s] == BNode
+    if is_b_node(g, t.s)
         ope = ObjectProperty(g.names[t.o])
         exprs[t.s] = ObjectInverseOf(ope = ope) 
     end
@@ -387,15 +387,18 @@ function parse_with_restrictions(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict
 
     dt = gen_datatype(g, first(datatypes).o)
 
-    if g.id_types[t.o] == BNode
+    if is_b_node(g, t.o)
         chain_ids = Vector{UInt64}()
         parse_chain_list!(g, t.o, chain_ids)
         f_n = Vector{String}()
-        lt_n = Vector{String}()
+        lt_n = Vector{Literal}()
         for id in chain_ids
-            t = g.triples[id]
-            push!(f_n, gt.names[t.p])
-            push!(lt_n, gt.names[t.o])
+            if is_b_node(g, id)
+                for n in filter(x -> x.s == id, g.triples)
+                    push!(f_n, g.names[n.p])
+                    push!(lt_n, Literal(g.names[n.p]))
+                end
+            end
         end
         exprs[t.s] = DataTypeRestriction(dt = dt, f_n = f_n, lt_n = lt_n)
     end

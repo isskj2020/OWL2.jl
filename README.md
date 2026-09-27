@@ -34,51 +34,83 @@ axioms = OWL2.load_owl("./out.ttl")
 
 | Implemented | Tested | OWL 2 Functional-Style Syntax |
 |---|---|---|
-| &check; | - | Declaration( Class( IRI ) ) |
-| &check; | - | Declaration( Datatype( IRI ) ) |
-| &check; | - | Declaration( ObjectProperty( IRI ) ) |
-| &check; | - | Declaration( DataProperty( IRI ) ) |
-| &check; | - | Declaration( AnnotationProperty( IRI ) ) |
-| &check; | - | Declaration( NamedIndividual( IRI ) ) |
-| &check; | - | SubClassOf( CE(x) CE(y) ) |
-| &check; | - | EquivalentClasses( CE(x) CE(y) ) |
-| &check; | - | DisjointClasses( CE(x) CE(y) ) |
-| &check; | - | DisjointClasses( CE(y1) ... CE(yn) ) |
-| &check; | - | DisjointUnion( CE(IRI) CE(y1) ... CE(yn) ) |
-| &check; | - | SubObjectPropertyOf( OPE(x) OPE(y) ) |
-| &check; | - | SubObjectPropertyOf( ObjectPropertyChain( OPE(y1) ... OPE(yn) ) OPE(x) ) |
-| &check; | - | EquivalentObjectProperties( OPE(x) OPE(y) ) |
-| &check; | - | DisjointObjectProperties( OPE(x) OPE(y) ) |
-| &check; | - | DisjointObjectProperties( OPE(y1) ... OPE(yn) ) |
-| &check; | - | ObjectPropertyDomain( OPE(x) CE(y) ) |
-| &check; | - | ObjectPropertyRange( OPE(x) CE(y) ) |
-| &check; | - | InverseObjectProperties( OPE(x) OPE(y) ) |
-| &check; | - | FunctionalObjectProperty( OPE(x) ) |
-| &check; | - | InverseFunctionalObjectProperty( OPE(x) ) |
-| &check; | - | ReflexiveObjectProperty( OPE(x) ) |
-| &check; | - | IrreflexiveObjectProperty( OPE(x) ) |
-| &check; | - | SymmetricObjectProperty( OPE(x) ) |
-| &check; | - | AsymmetricObjectProperty( OPE(x) ) |
-| &check; | - | TransitiveObjectProperty( OPE(x) ) |
-| &check; | - | SubDataPropertyOf( DPE(x) DPE(y) ) |
-| &check; | - | EquivalentDataProperties( DPE(x) DPE(y) ) |
-| &check; | - | DisjointDataProperties( DPE(x) DPE(y) ) |
-| &check; | - | DisjointDataProperties( DPE(y1) ... DPE(yn) ) |
-| &check; | - | DataPropertyDomain( DPE(x) CE(y) ) |
-| &check; | - | DataPropertyRange( DPE(x) DR(y) ) |
-| &check; | - | FunctionalDataProperty( DPE(x) ) |
-| &check; | - | DatatypeDefinition( DR(IRI) DR(y) ) |
-| &check; | - | HasKey( CE(x) ( OPE(z1) ... OPE(zm) ) ( DPE(w1) ... DPE(wn) ) ) |
-| &check; | - | SameIndividual( x y ) |
-| &check; | - | DifferentIndividuals( x y ) |
-| &check; | - | DifferentIndividuals( x1 ... xn ) |
-| &check; | - | ClassAssertion( CE(y) x ) |
-| &check; | - | ObjectPropertyAssertion( OPE(IRI) x z ) |
-| &check; | - | NegativeObjectPropertyAssertion( OPE(y) w z ) |
-| &check; | - | DataPropertyAssertion( DPE(IRI) x lt ) |
-| &check; | - | NegativeDataPropertyAssertion( DPE(y) w lt ) |
-| &check; | - | AnnotationAssertion( owl:deprecated IRI "true"^^xsd:boolean ) |
-| &check; | - | AnnotationAssertion( owl:deprecated IRI "true"^^xsd:boolean ) |
-| &check; | - | SubAnnotationPropertyOf( AP(IRI) AP(IRI) ) |
-| &check; | - | AnnotationPropertyDomain( AP(IRI) IRI ) |
-| &check; | - | AnnotationPropertyRange( AP(IRI) IRI ) |
+|         | -       | Ontology( ontologyIRI versionIRI ... ) |
+| &check; | -       | Declaration( Datatype( DT ) ) |
+| &check; | -       | Declaration( Class( C ) ) |
+| &check; | -       | Declaration( ObjectProperty( OP ) ) |
+| &check; | -       | Declaration( DataProperty( DP ) ) |
+| &check; | -       | Declaration( AnnotationProperty( AP ) ) |
+| &check; | -       | Declaration( NamedIndividual( \*:a ) ) |
+| &check; | -       | ObjectInverseOf( OP ) |
+| &check; | -       | DataIntersectionOf( DR1 ... DRn ) |
+| &check; | -       | DataUnionOf( DR1 ... DRn ) |
+| &check; | -       | DataComplementOf( DR ) |
+| &check; | -       | DataOneOf( lt1 ... ltn ) |
+| &check; | &check; | DatatypeRestriction( DT  F1 lt1   ... ) |
+| &check; | -       | ObjectIntersectionOf( CE1 ... CEn ) |
+| &check; | -       | ObjectUnionOf( CE1 ... CEn ) |
+| &check; | -       | ObjectComplementOf( CE ) |
+| &check; | -       | ObjectOneOf( a1 ... an ) |
+| &check; | -       | ObjectSomeValuesFrom( OPE CE ) |
+| &check; | -       | ObjectAllValuesFrom( OPE CE ) |
+| &check; | -       | ObjectHasValue( OPE a ) |
+| &check; | -       | ObjectHasSelf( OPE ) |
+| &check; | -       | ObjectMinCardinality( n OPE ) |
+| &check; | -       | ObjectMinCardinality( n OPE CE ) |
+| &check; | -       | ObjectMaxCardinality( n OPE ) |
+| &check; | -       | ObjectMaxCardinality( n OPE CE ) |
+| &check; | -       | ObjectExactCardinality( n OPE ) |
+| &check; | -       | ObjectExactCardinality( n OPE CE ) |
+| &check; | -       | DataSomeValuesFrom( DPE DR ) |
+| &check; | -       | DataSomeValuesFrom( DPE1 ... DPEn DR ), n ≥ 2 |
+| &check; | -       | DataAllValuesFrom( DPE DR ) |
+| &check; | -       | DataAllValuesFrom( DPE1 ... DPEn DR ), n ≥ 2 |
+| &check; | -       | DataHasValue( DPE lt ) |
+| &check; | -       | DataMinCardinality( n DPE ) |
+| &check; | -       | DataMinCardinality( n DPE DR ) |
+| &check; | -       | DataMaxCardinality( n DPE ) |
+| &check; | -       | DataMaxCardinality( n DPE DR ) |
+| &check; | -       | DataExactCardinality( n DPE ) |
+| &check; | -       | DataExactCardinality( n DPE DR ) |
+| &check; | -       | SubClassOf( CE1 CE2 ) |
+| &check; | -       | EquivalentClasses( CE1 ... CEn ) |
+| &check; | -       | DisjointClasses( CE1 CE2 ) |
+| &check; | -       | DisjointClasses( CE1 ... CEn ), n > 2 |
+| &check; | -       | DisjointUnion( C CE1 ... CEn ) |
+| &check; | -       | SubObjectPropertyOf( OPE1 OPE2 ) |
+| &check; | -       | SubObjectPropertyOf( ObjectPropertyChain( OPE1 ... OPEn ) OPE ) |
+| &check; | -       | EquivalentObjectProperties( OPE1 ... OPEn ) |
+| &check; | -       | DisjointObjectProperties( OPE1 OPE2 ) |
+| &check; | -       | DisjointObjectProperties( OPE1 ... OPEn ), n > 2 |
+| &check; | -       | ObjectPropertyDomain( OPE CE ) |
+| &check; | -       | ObjectPropertyRange( OPE CE ) |
+| &check; | -       | InverseObjectProperties( OPE1 OPE2 ) |
+| &check; | -       | FunctionalObjectProperty( OPE ) |
+| &check; | -       | InverseFunctionalObjectProperty( OPE ) |
+| &check; | -       | ReflexiveObjectProperty( OPE ) |
+| &check; | -       | IrreflexiveObjectProperty( OPE ) |
+| &check; | -       | SymmetricObjectProperty( OPE ) |
+| &check; | -       | AsymmetricObjectProperty( OPE ) |
+| &check; | -       | TransitiveObjectProperty( OPE ) |
+| &check; | -       | SubDataPropertyOf( DPE1 DPE2 ) |
+| &check; | -       | EquivalentDataProperties( DPE1 ... DPEn ) |
+| &check; | -       | DisjointDataProperties( DPE1 DPE2 ) |
+| &check; | -       | DisjointDataProperties( DPE1 ... DPEn ), n > 2 |
+| &check; | -       | DataPropertyDomain( DPE CE ) |
+| &check; | -       | DataPropertyRange( DPE DR ) |
+| &check; | -       | FunctionalDataProperty( DPE ) |
+| &check; | -       | DatatypeDefinition( DT DR ) |
+| &check; | -       | HasKey( CE ( OPE1 ... OPEm ) ( DPE1 ... DPEn ) ) |
+| &check; | -       | SameIndividual( a1 ... an ) |
+| &check; | -       | DifferentIndividuals( a1 a2 ) |
+| &check; | -       | DifferentIndividuals( a1 ... an ), n > 2 |
+| &check; | -       | ClassAssertion( CE a ) |
+| &check; | -       | ObjectPropertyAssertion( OP a1 a2 ) |
+| &check; | -       | ObjectPropertyAssertion( ObjectInverseOf( OP ) a1 a2 ) |
+| &check; | -       | NegativeObjectPropertyAssertion( OPE a1 a2 ) |
+| &check; | -       | DataPropertyAssertion( DPE a lt ) |
+| &check; | -       | NegativeDataPropertyAssertion( DPE a lt ) |
+| &check; | -       | AnnotationAssertion( AP as av ) |
+| &check; | -       | SubAnnotationPropertyOf( AP1 AP2 ) |
+| &check; | -       | AnnotationPropertyDomain( AP U ) |
+| &check; | -       | AnnotationPropertyRange( AP U ) |

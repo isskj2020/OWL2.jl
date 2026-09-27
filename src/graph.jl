@@ -1,6 +1,6 @@
 using Random, PythonCall
 
-@enum TermType URIRef BNode Literal Variable
+@enum TermType URIRefType BNodeType LiteralType VariableType
 
 struct TripleID
     s::UInt64
@@ -26,6 +26,11 @@ end
 term_id(g::Graph, x::String) = get(g.ids, x, -1)
 blank_node_id() = "_:" * randstring(12)
 
+is_uri_ref(g, id) = g.id_types[id] == URIRefType
+is_b_node(g, id) = g.id_types[id] == BNodeType
+is_literal(g, id) = g.id_types[id] == LiteralType
+is_variable(g, id) = g.id_types[id] == VariableType
+
 function string_triple(g::Graph, t::TripleID)
     return "$(g.names[t.s]) $(g.names[t.p]) $(g.names[t.o]) ."
 end
@@ -43,6 +48,7 @@ function literal_id!(g::Graph, term::Term)
 end
 
 function add_triples!(g::Graph, rdflib, s, p, o)
+    @debug "s:$s p:$p o:$o"
     sid = literal_id!(g, convert_term(rdflib, s))
     pid = literal_id!(g, convert_term(rdflib, p))
     oid = literal_id!(g, convert_term(rdflib, o))
@@ -51,7 +57,7 @@ end
 
 
 function compose!(g::Graph)
-    owl_thing_id = literal_id!(g, Term(TERM_OWL_THING, URIRef))
+    owl_thing_id = literal_id!(g, Term(TERM_OWL_THING, URIRefType))
 
     decls = Dict{UInt64, Any}()
     exprs = Dict{UInt64, Any}()
@@ -92,8 +98,8 @@ function compose!(g::Graph)
 end
 
 function convert_term(rdflib, x)
-    pyconvert(Bool, pytype(x) == rdflib.term.BNode) && return Term(string(x.n3()), BNode)
-    pyconvert(Bool, pytype(x) == rdflib.term.URIRef) && return Term(string(x.n3()), URIRef)
-    pyconvert(Bool, pytype(x) == rdflib.term.Literal) && return Term(string(x.n3()), Literal)
-    pyconvert(Bool, pytype(x) == rdflib.term.Variable) && return Term(string(x.n3()), Variable)
+    pyconvert(Bool, pytype(x) == rdflib.term.BNode) && return Term(string(x.n3()), BNodeType)
+    pyconvert(Bool, pytype(x) == rdflib.term.URIRef) && return Term(string(x.n3()), URIRefType)
+    pyconvert(Bool, pytype(x) == rdflib.term.Literal) && return Term(string(x.n3()), LiteralType)
+    pyconvert(Bool, pytype(x) == rdflib.term.Variable) && return Term(string(x.n3()), VariableType)
 end

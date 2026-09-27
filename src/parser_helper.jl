@@ -5,14 +5,15 @@ find_owl_on_class_nodes(g::Graph, nodes::Vector{TripleID}) = filter(x -> x.p == 
 find_owl_on_property_nodes(g::Graph, nodes::Vector{TripleID}) = filter(x -> x.p == term_id(g, TERM_OWL_ON_PROPERTY), nodes)
 find_owl_on_properties_nodes(g::Graph, nodes::Vector{TripleID}) = filter(x -> x.p == term_id(g, TERM_OWL_ON_PROPERTIES), nodes)
 find_owl_on_data_range_nodes(g::Graph, nodes::Vector{TripleID}) = filter(x -> x.p == term_id(g, TERM_OWL_ON_DATA_RANGE), nodes)
-find_owl_on_datatype_ndoes(g::Graph, nodes::Vector{TripleID}) = filter(x -> x.p == term_id(g, TERM_OWL_ON_DATATYPE), nodes)
+find_owl_on_datatype_nodes(g::Graph, nodes::Vector{TripleID}) = filter(x -> x.p == term_id(g, TERM_OWL_ON_DATATYPE), nodes)
 find_rdf_first_nodes(g::Graph, nodes::Vector{TripleID}) = filter(x -> x.p == term_id(g, TERM_RDF_FIRST), nodes)
 find_rdf_rest_nodes(g::Graph, nodes::Vector{TripleID}) = filter(x -> x.p == term_id(g, TERM_RDF_REST), nodes)
 
 is_class(g, n) = n.p == term_id(g, TERM_RDF_TYPE) && n.o == term_id(g, TERM_OWL_CLASS)
 
-function parse_chain_list!(g::Graph, id::UInt64, out::Vector{UInt64})
+function parse_chain_list!(g, id, out)
     chains = filter(x -> x.s == id, g.triples)
+
     first_nodes = find_rdf_first_nodes(g, chains)
     isempty(first_nodes) && return
     first_node = first(first_nodes)
@@ -21,31 +22,31 @@ function parse_chain_list!(g::Graph, id::UInt64, out::Vector{UInt64})
     isempty(rest_nodes) && return
     rest_node = first(rest_nodes)
 
-    if g.id_types[rest_node.o] == BNode
+    if is_b_node(g, rest_node.o)
         parse_chain_list!(g, rest_node.o, out)
     end
 end
 
-function gen_class(g::Graph, id::UInt64)
+function gen_class(g, id)
     name = g.names[id]
-    if g.id_types[id] == BNode
+    if is_b_node(g, id)
         return ClassNodeID(name)
     else
         return Class(name)
     end
 end
 
-function gen_datatype(g::Graph, id::UInt64)
+function gen_datatype(g, id)
     name = g.names[id]
-    if g.id_types[id] == BNode
+    if is_b_node(g, id)
         return DataNodeID(name)
     else
         return DataType(name)
     end
 end
 
-function gen_individual(g::Graph, id::UInt64)
-    if g.id_types[id] == BNode
+function gen_individual(g, id)
+    if is_b_node(g, id)
         return AnonymousIndividual(g.names[id])
     else
         return NamedIndividual(g.names[id])

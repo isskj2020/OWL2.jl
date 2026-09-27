@@ -20,6 +20,8 @@ end
 
 add_ntps!(tps, x::String, parent) = x
 
+add_ntps!(tps, x::Literal, parent) = x.x
+
 add_ntps!(tps, x::Class, parent) = begin
     push!(tps, (x.x, TERM_RDF_TYPE, TERM_OWL_CLASS))
     return x.x
@@ -215,8 +217,9 @@ add_ntps!(tps, x::DataHasValue, parent) = begin
     id = blank_node_id()
     push!(tps, (id, TERM_RDF_TYPE, TERM_OWL_RESTRICTION))
     o = add_ntps!(tps, x.dpe, id)
+    value = add_ntps!(tps, t.lt, id)
     push!(tps, (id, TERM_OWL_ON_PROPERTY, o))
-    push!(tps, (id, TERM_OWL_HAS_VALUE, t.lt))
+    push!(tps, (id, TERM_OWL_HAS_VALUE, value))
     return id
 end
 
@@ -297,16 +300,19 @@ add_ntps!(tps, x::DataOneOf, parent) = begin
 end
 
 add_ntps!(tps, x::DataTypeRestriction, parent) = begin
+    sub = blank_node_id()
+    push!(tps, (sub, TERM_RDF_TYPE, TERM_RDFS_DATATYPE))
     o = add_ntps!(tps, x.dt, parent)
-    push!(tps, (parent, TERM_OWL_ON_DATA_TYPE, o))
+    push!(tps, (sub, TERM_OWL_ON_DATATYPE, o))
     o = blank_node_id()
-    push!(tps, (parent, TERM_OWL_WITH_RESTRICTION, o))
+    push!(tps, (sub, TERM_OWL_WITH_RESTRICTIONS, o))
     ids = [blank_node_id() for i in 1:length(x.f_n)]
     add_ntps!(tps, ids, o)
     for i in eachindex(ids)
-        push!(tps, (ids[i], x.f_n[i], x.lt_n[i]))
+        lt = add_ntps!(tps, x.lt_n[i], parent)
+        push!(tps, (ids[i], x.f_n[i], lt))
     end
-    return parent
+    return sub
 end
 
 add_ntps!(tps, x::Declaration, parent) = add_ntps!(tps, x.e, parent)
@@ -627,9 +633,9 @@ add_ntps!(tps, x::DifferentIndividuals, parent) = begin
 end
 
 add_ntps!(tps, x::ClassAssertion, parent) = begin
-    s = add_ntps!(tps, x.ce, parent)
+    s = add_ntps!(tps, x.a, parent)
     p = TERM_RDF_TYPE
-    o = add_ntps!(tps, x.a, parent)
+    o = add_ntps!(tps, x.ce, parent)
     push!(tps, (s, p, o))
     return parent
 end
@@ -650,27 +656,27 @@ add_ntps!(tps, x::NegativeObjectPropertyAssertion, parent) = begin
     push!(tps, (id, TERM_RDF_TYPE, TERM_OWL_NEGATIVE_PROPERTY_ASSERTION))
     push!(tps, (id, TERM_OWL_SOURCE_INDIVIDUAL, a1))
     push!(tps, (id, TERM_OWL_ASSERTION_PROPERTY, ope))
-    push!(tps, (id, TERM_OWL_TARGET_VALUE, a2))
+    push!(tps, (id, TERM_OWL_TARGET_INDIVIDUAL, a2))
     return id
 end
 
 add_ntps!(tps, x::DataPropertyAssertion, parent) = begin
-    s = add_ntps!(tps, x.a1, parent)
-    p = add_ntpls!(tps, x.dpe, parent)
-    o = add_ntps!(tps, x.a2, parent)
+    s = add_ntps!(tps, x.a, parent)
+    p = add_ntps!(tps, x.dpe, parent)
+    o = add_ntps!(tps, x.lt, parent)
     push!(tps, (s, p, o))
     return parent
 end
 
 add_ntps!(tps, x::NegativeDataPropertyAssertion, parent) = begin
     id = blank_node_id()
-    a1 = add_ntps!(tps, x.a1, parent)
+    a = add_ntps!(tps, x.a, parent)
     dpe = add_ntps!(tps, x.dpe, parent)
-    a2 = add_ntps!(tps, x.a2, parent)
+    value = add_ntps!(tps, x.lt, parent)
     push!(tps, (id, TERM_RDF_TYPE, TERM_OWL_NEGATIVE_PROPERTY_ASSERTION))
     push!(tps, (id, TERM_OWL_SOURCE_INDIVIDUAL, a1))
     push!(tps, (id, TERM_OWL_ASSERTION_PROPERTY, dpe))
-    push!(tps, (id, TERM_OWL_TARGET_VALUE, a2))
+    push!(tps, (id, TERM_OWL_TARGET_VALUE, value))
     return id
 end
 

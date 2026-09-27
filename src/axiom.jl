@@ -20,6 +20,10 @@ end
     x::String
 end
 
+@kwdef struct Literal
+    x::String
+end
+
 @kwdef struct DataType <: DataRange
     x::String
 end
@@ -121,7 +125,7 @@ end
 
 @kwdef mutable struct DataHasValue <: CExpression
     dpe::DPExpression
-    lt::String
+    lt::Literal
 end
 
 @kwdef mutable struct DataMinCardinality <: CExpression
@@ -155,13 +159,13 @@ end
 end
 
 @kwdef mutable struct DataOneOf <: DataRange
-    lt_n::Vector{String}
+    lt_n::Vector{Literal}
 end
 
 @kwdef mutable struct DataTypeRestriction <: DataRange
     dt::DataType
     f_n::Vector{String}
-    lt_n::Vector{String}
+    lt_n::Vector{Literal}
 end
 
 @kwdef mutable struct Annotation
@@ -345,15 +349,15 @@ end
 @kwdef mutable struct DataPropertyAssertion <: Assertion
     ann_n::Vector{Annotation} = []
     dpe::DPExpression
-    a1::Individual
-    a2::Individual
+    a::Individual
+    lt::String
 end
 
 @kwdef mutable struct NegativeDataPropertyAssertion <: Assertion
     ann_n::Vector{Annotation} = []
     dpe::DPExpression
-    a1::Individual
-    a2::Individual
+    a::Individual
+    lt::String
 end
 
 @kwdef mutable struct AnnotationAssertion <: AnnotationAxiom

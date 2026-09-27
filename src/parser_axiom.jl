@@ -104,7 +104,7 @@ function parse_all_disjoint_classes(g::Graph, decls::Dict{UInt64, Any}, exprs::D
     nodes = filter(x -> t.s == x.s, g.triples)
     ce_n = Vector{CExpression}()
     for n in nodes
-        if t.s == n.s && g.id_types[n.s] == BNode && g.id_types[n.o] == BNode
+        if t.s == n.s && is_b_node(g, n.s) && is_b_node(g, n.o)
             chain_ids = Vector{UInt64}()
             parse_chain_list!(g, n.o, chain_ids)
             for id in chain_ids
@@ -124,7 +124,7 @@ function parse_disjoint_union_of(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict
     for n in nodes
         if is_class(g, n)
             c = gen_class(g, n.s)
-        elseif g.id_types[n.o] == BNode
+        elseif is_b_node(g, n.o)
             chain_ids = Vector{UInt64}()
             parse_chain_list!(g, n.o, chain_ids)
             for id in chain_ids
@@ -174,7 +174,7 @@ function parse_property_chain_axiom(g::Graph, decls::Dict{UInt64, Any}, exprs::D
 
     sub = get(exprs, t.s, get(decls, t.s, nothing))
     ope_n = Vector{OPExpression}()
-    if sub isa OPExpression && g.id_types[t.o] == BNode
+    if sub isa OPExpression && is_b_node(g, t.o)
         chain_ids = Vector{UInt64}()
         parse_chain_list!(g, t.o, chain_ids)
         for id in chain_ids
@@ -305,7 +305,7 @@ function parse_has_key(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, A
     t.p != term_id(g, TERM_OWL_HAS_KEY) && return 
 
     sub = get(exprs, t.s, get(decls, t.s, nothing))
-    if sub isa CExpression && g.id_types[t.o] == BNode
+    if sub isa CExpression && is_b_node(g, t.o)
         chain_ids = Vector{UInt64}()
         parse_chain_list!(g, t.o, chain_ids)
         ope_n = Vector{OPExpression}()
@@ -346,7 +346,7 @@ function parse_all_different(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UIn
 
     nodes = filter(x -> t.s == x.s, g.triples)
     for n in nodes
-        if t.s == n.s && g.id_types[n.s] == BNode && g.id_types[n.o] == BNode
+        if t.s == n.s && is_b_node(g, n.s) && is_b_node(g, n.o)
             chain_ids = Vector{UInt64}()
             parse_chain_list!(g, n.o, chain_ids)
             a_n = Vector{Individual}()
@@ -380,37 +380,35 @@ function parse_data_property_assertion(g::Graph, decls::Dict{UInt64, Any}, exprs
     sub = get(exprs, t.p, get(decls, t.p, nothing))
     (sub == nothing || !(sub isa DPExpression)) && return
 
-    a1 = gen_individual(g, t.s)
-    a2 = gen_individual(g, t.o)
-    push!(axioms, DataPropertyAssertion(dpe = sub, a1 = a1, a2 = a2))
+    a = gen_individual(g, t.s)
+    lt = Literal(g.names[t.o])
+    push!(axioms, DataPropertyAssertion(dpe = sub, a = a, lt = lt))
 end
 
 function parse_negative_property_assertion(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    (t.o != term_id(g, TERM_OWL_NEGATIVE_PROPERTY_ASSERTION) ||
-     t.p != term_id(g, TERM_RDF_TYPE) ||
-     g.id_types[t.s] != BNode) && return
+    (t.o != term_id(g, TERM_OWL_NEGATIVE_PROPERTY_ASSERTION) || t.p != term_id(g, TERM_RDF_TYPE) || !is_b_node(g, t.s)) && return
 
     nodes = filter(x -> t.s == x.s, g.triples)
     src = nothing
-    tgt = nothing
+    target_individual = nothing
+    target_value = nothing
     prop = nothing
     for n in nodes
         if n.p == term_id(g, TERM_OWL_SOURCE_INDIVIDUAL)
             src = gen_individual(n.o)
         elseif n.p == term_id(g, TERM_OWL_TARGET_INDIVIDUAL)
-            tgt = gen_individual(n.o)
+            target_individual = gen_individual(n.o)
+        elseif n.p == term_id(g, TERM_OWL_TARGET_VALUE)
+            target_value = Literal(g.names[n.o])
         elseif n.p == term_id(g, TERM_OWL_ASSERTION_PROPERTY)
             prop = get(decls, n.o, get(expr, n.o, nothing))
         end
     end
 
-    if src == nothing || tgt == nothing || prop == nothing
-        @warn "unkown axiom ce1:$ce1 ce2:$ce2 t:$(string_triple(g, t))"
-    end
-    if prop isa OPExpression
-        push!(axioms, NegativeObjectPropertyAssertion(ope = prop, a1 = src, a2 = tgt))
-    elseif prop isa DPExpression
-        push!(axioms, NegativeDataPropertyAssertion(dpe = prop, a1 = src, a2 = tgt))
+    if prop isa OPExpression && src != nothing && target_individual != nothing
+        push!(axioms, NegativeObjectPropertyAssertion(ope = prop, a1 = src, a2 = target_individual))
+    elseif prop isa DPExpression  src != nothing && target_value != nothing
+        push!(axioms, NegativeDataPropertyAssertion(dpe = prop, a1 = src, lt = target_value))
     else
         @warn "unkown axiom ce1:$ce1 ce2:$ce2 t:$(string_triple(g, t))"
     end
