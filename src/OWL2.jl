@@ -1,6 +1,5 @@
 module OWL2
 
-using PythonCall
 
 include("terms.jl")
 
@@ -17,16 +16,8 @@ include("normaliser_axiom.jl")
 include("ntriple_writer.jl")
 
 function load_owl(filepath)
-    rdflib = pyimport("rdflib")
-    g = rdflib.Graph()
-    g.parse(filepath)
-
     graph = Graph()
-    for (s, p, o) in pyiter(g)
-        add_triples!(graph, rdflib, s, p, o)
-    end
-    PythonCall.GC.gc()
-
+    add_triples!(graph, filepath)
     return compose!(graph)
 end
 

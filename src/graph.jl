@@ -1,4 +1,4 @@
-using Random, PythonCall
+using Random, PythonCall, Base.Threads
 
 @enum TermType URIRefType BNodeType LiteralType VariableType
 
@@ -6,12 +6,6 @@ struct TripleID
     s::UInt64
     p::UInt64
     o::UInt64
-end
-
-
-struct Term
-    x::String
-    type::TermType
 end
 
 @kwdef mutable struct Graph
@@ -35,29 +29,19 @@ function string_triple(g::Graph, t::TripleID)
     return "$(g.names[t.s]) $(g.names[t.p]) $(g.names[t.o]) ."
 end
 
-
-function literal_id!(g::Graph, term::Term)
-    if term.x in g.names
-        return g.ids[term.x]
+function literal_id!(g::Graph, literal::String, type::TermType)
+    if literal in g.names
+        return g.ids[literal]
     end
-    push!(g.names, term.x)
+    push!(g.names, literal)
     id = length(g.names)
-    g.ids[term.x] = id
-    g.id_types[id] = term.type
+    g.ids[literal] = id
+    g.id_types[id] = type
     return id
 end
 
-function add_triples!(g::Graph, rdflib, s, p, o)
-    @debug "s:$s p:$p o:$o"
-    sid = literal_id!(g, convert_term(rdflib, s))
-    pid = literal_id!(g, convert_term(rdflib, p))
-    oid = literal_id!(g, convert_term(rdflib, o))
-    push!(g.triples, TripleID(sid, pid, oid))
-end
-
-
 function compose!(g::Graph)
-    owl_thing_id = literal_id!(g, Term(TERM_OWL_THING, URIRefType))
+    owl_thing_id = literal_id!(g, TERM_OWL_THING, URIRefType)
 
     decls = Dict{UInt64, Any}()
     exprs = Dict{UInt64, Any}()
@@ -67,6 +51,7 @@ function compose!(g::Graph)
     for t in g.triples
         parse_declarations(g, decls, t)
     end
+
     for t in g.triples
         parse_class_expressions(g, decls, exprs, t)
     end
@@ -79,27 +64,26 @@ function compose!(g::Graph)
     end
 
     normalise_axioms(g, decls, exprs, axioms)
-    parse_declaration(g, decls, axioms)
 
-    @debug "== declarations =="
-    for (k, v) in decls
-        @debug v
-    end
-    @debug "== expressions =="
-    for (k, v) in exprs
-        @debug "$(g.names[k]) => $v"
-    end
-
-    @debug "== axioms =="
-    for axiom in axioms
-        @debug axiom
-    end
     return axioms
 end
 
-function convert_term(rdflib, x)
-    pyconvert(Bool, pytype(x) == rdflib.term.BNode) && return Term(string(x.n3()), BNodeType)
-    pyconvert(Bool, pytype(x) == rdflib.term.URIRef) && return Term(string(x.n3()), URIRefType)
-    pyconvert(Bool, pytype(x) == rdflib.term.Literal) && return Term(string(x.n3()), LiteralType)
-    pyconvert(Bool, pytype(x) == rdflib.term.Variable) && return Term(string(x.n3()), VariableType)
+function add_triples!(g::Graph, filepath)
+    rdflib = pyimport("rdflib")
+    rdf_g = rdflib.Graph()
+    rdf_g.parse(filepath)
+    for (s, p, o) in pyiter(rdf_g)
+        sid = literal_id!(g, string(s.n3()), rdf_type(rdflib, s))
+        pid = literal_id!(g, string(p.n3()), rdf_type(rdflib, p))
+        oid = literal_id!(g, string(o.n3()), rdf_type(rdflib, o))
+        push!(g.triples, TripleID(sid, pid, oid))
+    end
+    PythonCall.GC.gc()
+end
+
+function rdf_type(rdflib, x)
+    pyconvert(Bool, pytype(x) == rdflib.term.BNode) && return BNodeType
+    pyconvert(Bool, pytype(x) == rdflib.term.URIRef) && return URIRefType
+    pyconvert(Bool, pytype(x) == rdflib.term.Literal) && return LiteralType
+    pyconvert(Bool, pytype(x) == rdflib.term.Variable) && return VariableType
 end

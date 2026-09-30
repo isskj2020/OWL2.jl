@@ -1,4 +1,4 @@
-using OWL2, PythonCall, Test
+using OWL2, Test
 
 @testset "DatatypeRestriction" begin
     axioms = OWL2.load_owl(joinpath("test/res/datatype_restriction.xml"))
