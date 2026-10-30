@@ -1,3 +1,20 @@
 
-function normalise_axioms(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom})
+function _normalise_axioms!(g, decls, exprs, axioms)
+    _parse_declaration!(g, decls, axioms)
 end
+
+function _parse_declaration!(g, decls, axioms)
+    for (id, d) in decls
+        if d isa Class ||
+            d isa DataType ||
+            d isa ObjectProperty ||
+            d isa DataProperty ||
+            d isa AnnotationProperty ||
+            d isa Individual
+            if !(d.x isa BlankNode)
+                push!(axioms, Declaration(e = d))
+            end
+        end
+    end
+end
+

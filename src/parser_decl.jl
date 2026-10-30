@@ -1,26 +1,30 @@
+using RDF
 #
 # Parsing Declarations
 # https://www.w3.org/TR/owl2-mapping-to-rdf/
 #
 
-function parse_declarations(g::Graph, decls::Dict{UInt64, Any}, t::TripleID)
-    if t.o == term_id(g, TERM_OWL_CLASS) && !haskey(decls, t.s)
-        decls[t.s] = gen_class(g, t.s)
+function _parse_declarations!(g, decls, t)
+    if t.object == owl.Class && !haskey(decls, t.subject)
+        decls[t.subject] = Class(t.subject)
     end
-    if is_uri_ref(g, t.s) && t.o == term_id(g, TERM_OWL_OBJECT_PROPERTY) && !haskey(decls, t.s)
-        decls[t.s] = ObjectProperty(g.names[t.s])
+    if t.object == rdfs.Datatype && !haskey(decls, t.subject)
+        decls[t.subject] = DataType(t.subject)
     end
-    if is_uri_ref(g, t.s) && t.o == term_id(g, TERM_RDFS_DATATYPE) && !haskey(decls, t.s)
-        decls[t.s] = DataType(g.names[t.s])
+    if t.subject isa IRI && t.object == owl.ObjectProperty && !haskey(decls, t.subject)
+        decls[t.subject] = ObjectProperty(t.subject)
     end
-    if is_uri_ref(g, t.s) && t.o == term_id(g, TERM_OWL_DATATYPE_PROPERTY) && !haskey(decls, t.s)
-        decls[t.s] = DataProperty(g.names[t.s])
+    if t.subject isa IRI && t.object == owl.DatatypeProperty && !haskey(decls, t.subject)
+        decls[t.subject] = DataProperty(t.subject)
     end
-    if is_uri_ref(g, t.s) && t.o == term_id(g, TERM_OWL_NAMED_INDIVIDUAL) && !haskey(decls, t.s)
-        decls[t.s] = NamedIndividual(g.names[t.s])
+    if t.subject isa IRI && t.object == owl.NamedIndividual && !haskey(decls, t.subject)
+        decls[t.subject] = Individual(t.subject)
     end
-    if is_uri_ref(g, t.s) && t.o == term_id(g, TERM_OWL_ANNOTATION_PROPERTY) && !haskey(decls, t.s)
-        decls[t.s] = AnnotationProperty(g.names[t.s])
+    if t.subject isa IRI && t.object == owl.AnnotationProperty && !haskey(decls, t.subject)
+        decls[t.subject] = AnnotationProperty(t.subject)
+    end
+    if t.subject isa IRI && t.predicate == rdf.type && t.object isa IRI && !haskey(decls, t.subject)
+        decls[t.subject] = Individual(t.subject)
     end
 end
 

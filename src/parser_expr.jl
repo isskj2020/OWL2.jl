@@ -3,403 +3,582 @@
 # https://www.w3.org/TR/owl2-mapping-to-rdf/
 #
 
-function parse_class_expressions(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, t::TripleID)
-    parse_some_values_from(g, decls, exprs, t)
-    parse_all_values_from(g, decls, exprs, t)
-    parse_intersection_of(g, decls, exprs, t)
-    parse_union_of(g, decls, exprs, t)
-    parse_complement_of(g, decls, exprs, t)
-    parse_one_of(g, decls, exprs, t)
-    parse_has_value(g, decls, exprs, t)
-    parse_has_self(g, decls, exprs, t)
-    parse_min_cardinality(g, decls, exprs, t)
-    parse_min_qualified_cardinality(g, decls, exprs, t)
-    parse_inverse_of(g, decls, exprs, t)
-    parse_with_restrictions(g, decls, exprs, t)
+function _parse_expressions!(g, decls, exprs, t)
+    _parse_some_values_from!(g, decls, exprs, t)
+    _parse_all_values_from!(g, decls, exprs, t)
+    _parse_intersection_of!(g, decls, exprs, t)
+    _parse_union_of!(g, decls, exprs, t)
+    _parse_complement_of!(g, decls, exprs, t)
+    _parse_datatype_complement_of!(g, decls, exprs, t)
+    _parse_one_of!(g, decls, exprs, t)
+    _parse_has_value!(g, decls, exprs, t)
+    _parse_has_self!(g, decls, exprs, t)
+    _parse_min_cardinality!(g, decls, exprs, t)
+    _parse_min_qualified_cardinality!(g, decls, exprs, t)
+    _parse_inverse_of!(g, decls, exprs, t)
+    _parse_with_restrictions!(g, decls, exprs, t)
 end
 
-function parse_some_values_from(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_SOME_VALUES_FROM) && return
-    nodes = filter(x -> t.s == x.s, g.triples)
-    @assert !isempty(find_owl_restriction_nodes(g, nodes))
+# ObjectSomeValuesFrom( OPE CE )
+# _:x rdf:type owl:Restriction .
+# _:x owl:onProperty T(OPE) .
+# _:x owl:someValuesFrom T(CE) .
+#
+# DataSomeValuesFrom( DPE DR )
+# _:x rdf:type owl:Restriction .
+# _:x owl:onProperty T(DPE) .
+# _:x owl:someValuesFrom T(DR) .
+#
+# DataSomeValuesFrom( DPE1 ... DPEn DR ), n ≥ 2
+# _:x rdf:type owl:Restriction .
+# _:x owl:onProperties T(SEQ DPE1 ... DPEn) .
+# _:x owl:someValuesFrom T(DR) .
+function _parse_some_values_from!(g, decls, exprs, t)
+    t.predicate == owl.someValuesFrom || return
 
-    if get(decls, t.o, nothing) isa CExpression
+    _restriction(g, t)
+
+    obj = get(decls, t.object, nothing)
+    if obj isa CExpression
         # object property
-        prop = first(find_owl_on_property_nodes(g, nodes))
-        ope = ObjectProperty(g.names[prop.o])
-        exprs[t.s] = ObjectSomeValuesFrom(ope = ope, ce = decls[t.o])
-    else
+        ope = _object_on_property(g, decls, t)
+        exprs[t.subject] = ObjectSomeValuesFrom(ope = ope, ce = obj)
+    elseif obj isa DataRange
         # data property
-        prop = find_owl_on_property_nodes(g, nodes)
-        if isempty(prop)
-            prop = find_owl_on_properties_nodes(g, nodes)
-        end
-        if isempty(prop)
-            @warn "unkown triple format: $(string_triple(g, t))"
-            return
-        end
-        prop = first(prop)
-        dpe_n = Vector{DPExpression}()
-        if is_b_node(g, prop.o)
-            chain_ids = Vector{UInt64}()
-            parse_chain_list!(g, prop.o, chain_ids)
-            for id in chain_ids
-                push!(dpe_n, gen_datatype(g, id))
-            end
-        else
-            push!(dpe_n, DataProperty(g.names[prop.o]))
-        end
-        dt = gen_datatype(g, t.o)
-        exprs[t.s] = DataSomeValuesFrom(dpe_n = dpe_n, dr = dt)
+        dpe_n = _data_on_properties(g, decls, t)
+        exprs[t.subject] = DataSomeValuesFrom(dpe_n = dpe_n, dr = obj)
+    else
+        throw(FormatError("$t $obj"))
     end
 end
 
-function parse_all_values_from(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_ALL_VALUES_FROM) && return
-    nodes = filter(x -> t.s == x.s, g.triples)
-    @assert !isempty(find_owl_restriction_nodes(g, nodes))
+# ObjectAllValuesFrom( OPE CE )
+# _:x rdf:type owl:Restriction .
+# _:x owl:onProperty T(OPE) .
+# _:x owl:allValuesFrom T(CE) .
+#
+# DataAllValuesFrom( DPE DR )
+# _:x rdf:type owl:Restriction .
+# _:x owl:onProperty T(DPE) .
+# _:x owl:allValuesFrom T(DR) .
+#
+# DataAllValuesFrom( DPE1 ... DPEn DR ), n ≥ 2
+# _:x rdf:type owl:Restriction .
+# _:x owl:onProperties T(SEQ DPE1 ... DPEn) .
+# _:x owl:allValuesFrom T(DR) .
+function _parse_all_values_from!(g, decls, exprs, t)
+    t.predicate == owl.allValuesFrom || return
 
-    prop = first(find_owl_on_property_nodes(g, nodes))
+    _restriction(g, t)
 
-    if get(decls, t.o, nothing) isa CExpression
+    obj = get(decls, t.object, nothing)
+    if obj isa CExpression
         # object property
-        prop = first(find_owl_on_property_nodes(g, nodes))
-        ope = ObjectProperty(g.names[prop.o])
-        exprs[t.s] = ObjectAllValuesFrom(ope = ope, ce = decls[t.o])
-    else
+        ope = _object_on_property(g, decls, t)
+        exprs[t.subject] = ObjectAllValuesFrom(ope = ope, ce = obj)
+    elseif obj isa DataRange
         # data property
-        prop = find_owl_on_property_nodes(g, nodes)
-        if isempty(prop)
-            prop = find_owl_on_properties_nodes(g, nodes)
-        end
-        if isempty(prop)
-            @warn "unkown triple format: $(string_triple(g, t))"
-            return
-        end
-        prop = first(prop)
-        dpe_n = Vector{DPExpression}()
-        if is_b_node(g, prop.o)
-            chain_ids = Vector{UInt64}()
-            parse_chain_list!(g, prop.o, chain_ids)
-            for id in chain_ids
-                push!(dpe_n, gen_datatype(g, id))
-            end
-        else
-            push!(dpe_n, DataProperty(g.names[prop.o]))
-        end
-        dt = gen_datatype(g, t.o)
-        exprs[t.s] = DataAllValuesFrom(dpe_n = dpe_n, dr = dt)
+        dpe_n = _data_on_properties(g, decls, t)
+        exprs[t.subject] = DataAllValuesFrom(dpe_n = dpe_n, dr = obj)
+    else
+        throw(FormatError("$t $obj"))
     end
 end
 
-function parse_intersection_of(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_INTERSECTION_OF) && return
-    nodes = filter(x -> t.s == x.s, g.triples)
+# ObjectIntersectionOf( CE1 ... CEn )
+# _:x rdf:type owl:Class .
+# _:x owl:intersectionOf T(SEQ CE1 ... CEn) .
+#
+# DataIntersectionOf( DR1 ... DRn )
+# _:x rdf:type rdfs:Datatype .
+# _:x owl:intersectionOf T(SEQ DR1 ... DRn) .
+function _parse_intersection_of!(g, decls, exprs, t)
+    t.predicate == owl.intersectionOf || return
 
-    if !isempty(find_owl_class_nodes(g, nodes))
+    if !isempty(match(g; subject = t.subject, predicate = rdf.type, object = owl.Class))
         # object intersection of
-        ce_n = Vector{CExpression}()
-        for n in nodes
-            if is_b_node(g, n.o)
-                chain_ids = Vector{UInt64}()
-                parse_chain_list!(g, n.o, chain_ids)
-                for id in chain_ids
-                    push!(ce_n, gen_class(g, id))
-                end
-            end
-        end
-        exprs[t.s] = ObjectIntersectionOf(ce_n = ce_n)
-    else
+        ce_n = _sequence_of_class_expressions(g, decls, t.object)
+        exprs[t.subject] = ObjectIntersectionOf(ce_n = ce_n)
+    elseif !isempty(match(g; subject = t.subject, predicate = rdf.type, object = rdfs.Datatype))
         # data intersection of
-        dr_n = Vector{DataRange}()
-        for n in nodes
-            if is_b_node(g, n.o)
-                chain_ids = Vector{UInt64}()
-                parse_chain_list!(g, n.o, chain_ids)
-                for id in chain_ids
-                    push!(dr_n, gen_datatype(g, id))
-                end
-            end
-        end
-        exprs[t.s] = DataIntersectionOf(dr_n = dr_n)
+        dr_n = _sequence_of_data_ranges(g, decls, t.object)
+        exprs[t.subject] = DataIntersectionOf(dr_n = dr_n)
+    else
+        throw(FormatError("$t $ts"))
     end
 end
 
-function parse_union_of(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_UNION_OF) && return
-    nodes = filter(x -> t.s == x.s, g.triples)
+# ObjectUnionOf( CE1 ... CEn )
+# _:x rdf:type owl:Class .
+# _:x owl:unionOf T(SEQ CE1 ... CEn) .
+#
+# DataUnionOf( DR1 ... DRn )
+# _:x rdf:type rdfs:Datatype .
+# _:x owl:unionOf T(SEQ DR1 ... DRn) .
+function _parse_union_of!(g, decls, exprs, t)
+    t.predicate == owl.unionOf || return
 
-    if !isempty(find_owl_class_nodes(g, nodes))
+    if !isempty(match(g; subject = t.subject, predicate = rdf.type, object = owl.Class))
         # object union of
-        ce_n = Vector{CExpression}()
-        for n in nodes
-            if is_b_node(g, n.o)
-                chain_ids = Vector{UInt64}()
-                parse_chain_list!(g, n.o, chain_ids)
-                for id in chain_ids
-                    push!(ce_n, gen_class(g, id))
-                end
-            end
-        end
-        exprs[t.s] = ObjectUnionOf(ce_n = ce_n)
-    elseif !isempty(find_owl_datatype_nodes(g, nodes))
+        ce_n = _sequence_of_class_expressions(g, decls, t.object)
+        exprs[t.subject] = ObjectUnionOf(ce_n = ce_n)
+    elseif !isempty(match(g; subject = t.subject, predicate = rdf.type, object = rdfs.Datatype))
         # data union of
-        dr_n = Vector{DataRange}()
-        for n in nodes
-            if is_b_node(g, n.o)
-                chain_ids = Vector{UInt64}()
-                parse_chain_list!(g, n.o, chain_ids)
-                for id in chain_ids
-                    push!(dr_n, gen_datatype(g, id))
-                end
-            end
-        end
-        exprs[t.s] = DataUnionOf(dr_n = dr_n)
-    end
-
-end
-
-function parse_complement_of(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_COMPLEMENT_OF) &&
-    t.p != term_id(g, TERM_OWL_DATATYPE_COMPLEMENT_OF) && return
-    nodes = filter(x -> t.s == x.s, g.triples)
-
-    if !isempty(find_owl_class_nodes(g, nodes))
-        # object complement of
-        ce = gen_class(g, t.o)
-        exprs[t.s] = ObjectComplementOf(ce = ce)
+        dr_n = _sequence_of_data_ranges(g, decls, t.object)
+        exprs[t.subject] = DataUnionOf(dr_n = dr_n)
     else
-        # data complement of
-        dt = gen_datatype(g, t.o)
-        exprs[t.s] = DataComplementOf(dr = dt)
+        throw(FormatError("$t"))
     end
 end
 
-function parse_one_of(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_ONE_OF) && return
-    nodes = filter(x -> t.s == x.s, g.triples)
 
-    if !isempty(find_owl_class_nodes(g, nodes))
+# ObjectComplementOf( CE )
+# _:x rdf:type owl:Class .
+# _:x owl:complementOf T(CE) .
+function _parse_complement_of!(g, decls, exprs, t)
+    t.predicate == owl.complementOf || return
+
+    if !isempty(match(g; subject = t.subject, predicate = rdf.type, object = owl.Class))
+        ce = get(decls, t.object, Class(t.object))
+        exprs[t.subject] = ObjectComplementOf(ce = ce)
+    else
+        throw(FormatError("$t"))
+    end
+end
+
+# DataComplementOf( DR )
+# _:x rdf:type rdfs:Datatype .
+# _:x owl:datatypeComplementOf T(DR) .
+function _parse_datatype_complement_of!(g, decls, exprs, t)
+    t.predicate == owl.datatypeComplementOf || return
+
+    if !isempty(match(g; subject = t.subject, predicate = rdf.type, object = rdfs.Datatype))
+        dt = get(decls, t.object, DataType(t.object))
+        exprs[t.subject] = DataComplementOf(dr = dt)
+    else
+        throw(FormatError("$t"))
+    end
+end
+
+# ObjectOneOf( a1 ... an )
+# _:x rdf:type owl:Class .
+# _:x owl:oneOf T(SEQ a1 ... an) .
+#
+# DataOneOf( lt1 ... ltn )
+# _:x rdf:type rdfs:Datatype .
+# _:x owl:oneOf T(SEQ lt1 ... ltn) .
+function _parse_one_of!(g, decls, exprs, t)
+    t.predicate == owl.oneOf || return 
+
+    if !isempty(match(g; subject = t.subject, predicate = rdf.type, object = owl.Class))
         # object one of
-        a_n = Vector{Individual}()
-        for n in nodes
-            if is_b_node(g, n.o)
-                chain_ids = Vector{UInt64}()
-                parse_chain_list!(g, n.o, chain_ids)
-                for id in chain_ids
-                    a = if is_b_node(g, id)
-                        AnonymousIndividual(g.names[id])
-                    else
-                        NamedIndividual(g.names[id])
-                    end
-                    push!(a_n, a)
-                end
+        a_n = Individual[]
+        if t.object isa BlankNode
+            terms = RDFTerm[]
+            parse_chain_list!(g, t.object, terms)
+            for term in terms
+                a = get(decls, term, Individual(term))
+                push!(a_n, a)
             end
         end
-        exprs[t.s] = ObjectOneOf(a_n = a_n)
-    else
+        exprs[t.subject] = ObjectOneOf(a_n = a_n)
+    elseif !isempty(match(g; subject = t.subject, predicate = rdf.type, object = rdfs.Datatype))
         # data one of
-        lt_n = Vector{String}()
-        for n in nodes
-            if is_b_node(g, n.o)
-                chain_ids = Vector{UInt64}()
-                parse_chain_list!(g, n.o, chain_ids)
-                for id in chain_ids
-                    push!(lt_n, g.names[id])
-                end
+        lt_n = Literal[]
+        if t.object isa BlankNode
+            terms = RDFTerm[]
+            parse_chain_list!(g, t.object, terms)
+            for term in terms
+                push!(lt_n, Literal(term))
             end
         end
-        exprs[t.s] = DataOneOf(lt_n = lt_n)
+        exprs[t.subject] = DataOneOf(lt_n = lt_n)
+    else
+        throw(FormatError("$t"))
     end
 end
 
-function parse_has_value(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_HAS_VALUE) && return 
-    nodes = filter(x -> t.s == x.s, g.triples)
-    @assert !isempty(find_owl_restriction_nodes(g, nodes))
+# ObjectHasValue( OPE a )
+# _:x rdf:type owl:Restriction .
+# _:x owl:onProperty T(OPE) .
+# _:x owl:hasValue T(a) .
+# 
+# DataHasValue( DPE lt )
+# _:x rdf:type owl:Restriction .
+# _:x owl:onProperty T(DPE) .
+# _:x owl:hasValue T(lt) .
+function _parse_has_value!(g, decls, exprs, t)
+    t.predicate == owl.hasValue || return 
 
-    prop = first(find_owl_on_property_nodes(g, nodes))
-    if is_literal(g, t.o)
-        # data has value 
-        dpe = DataProperty(g.names[prop.o])
-        lt = g.names[t.o]
-        exprs[t.s] = DataHasValue(dpe = dpe, lt = lt)
-    else
+    _restriction(g, t)
+
+    prop = get(decls, _on_property(g, t), nothing)
+    if prop isa OPExpression
         # object has value 
-        ope = ObjectProperty(g.names[prop.o])
-        a = if is_b_node(g, t.o)
-            AnonymousIndividual(g.names[t.o])
-        else
-            NamedIndividual(g.names[t.o])
-        end
-        exprs[t.s] = ObjectHasValue(ope = ope, a = a)
-    end
-end
-
-function parse_has_self(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_HAS_SELF) && return 
-    nodes = filter(x -> t.s == x.s, g.triples)
-    @assert !isempty(find_owl_restriction_nodes(g, nodes))
-
-    prop = first(find_owl_on_property_nodes(g, nodes))
-    ope = ObjectProperty(g.names[prop.o])
-    exprs[t.s] = ObjectHasSelf(ope = ope)
-end
-
-function parse_min_cardinality(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_MIN_CARDINALITY) && return 
-    nodes = filter(x -> t.s == x.s, g.triples)
-    @assert !isempty(find_owl_restriction_nodes(g, nodes))
-
-    n = match(r"^\\\"(.+)\\\"", g.names[t.o])[1] |> x -> parse(Int, x)
-
-    prop = get(decls, first(find_owl_on_property_nodes(g, nodes)).o, nothing)
-    if prop isa OPExpression
-        exprs[t.s] = ObjectMinCardinality(n = n, ope = prop)
+        a = Individual(t.object)
+        exprs[t.subject] = ObjectHasValue(ope = prop, a = a)
     elseif prop isa DPExpression
-        exprs[t.s] = DataMinCardinality(n = n, dpe = prop)
+        # data has value 
+        lt = _Literal(t.object)
+        exprs[t.subject] = DataHasValue(dpe = prop, lt = lt)
     else
-        @warn "unknown property: $prop"
+        throw(FormatError("$t $prop is unknown"))
     end
 end
 
-function parse_min_qualified_cardinality(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_MIN_QUALIFIED_CARDINALITY) && return 
-    nodes = filter(x -> t.s == x.s, g.triples)
-    @assert !isempty(find_owl_restriction_nodes(g, nodes))
+# ObjectHasSelf( OPE )
+# _:x rdf:type owl:Restriction .
+# _:x owl:onProperty T(OPE) .
+# _:x owl:hasSelf "true"^^xsd:boolean .
+function _parse_has_self!(g, decls, exprs, t)
+    t.predicate == owl.hasSelf || return
 
-    prop = first(find_owl_on_property_nodes(g, nodes))
+    _restriction(g, t)
 
-    n = match(r"^\\\"(.+)\\\"", g.names[t.o])[1] |> x -> parse(Int, x)
-
-    classes = find_owl_on_class_nodes(g, nodes)
-    if !isempty(classes)
-        ce = gen_class(g, first(classes).o)
-        ope = ObjectProperty(g.names[prop.o])
-        exprs[t.s] = ObjectMinCardinality(n = n, ope = ope, ce = ce)
-    end
-
-    datatypes = find_owl_on_data_range_nodes(g, nodes)
-    if !isempty(datatypes)
-        dt = gen_datatype(g, datatypes[1].o)
-        dpe = DataProperty(g.names[prop.o]) 
-        exprs[t.s] = DataMinCardinality(n = n, dpe = dpe, dr = dt)
-    end
+    ope = _object_on_property(g, decls, t)
+    exprs[t.subject] = ObjectHasSelf(ope = ope)
 end
 
-function parse_max_cardinality(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_MAX_CARDINALITY) && return 
-    nodes = filter(x -> t.s == x.s, g.triples)
-    @assert !isempty(find_owl_restriction_nodes(g, nodes))
+# ObjectMinCardinality( n OPE )
+# _:x rdf:type owl:Restriction .
+# _:x owl:onProperty T(OPE) .
+# _:x owl:minCardinality "n"^^xsd:nonNegativeInteger .
+#
+# DataMinCardinality( n DPE )
+# _:x rdf:type owl:Restriction .
+# _:x owl:onProperty T(DPE) .
+# _:x owl:minCardinality "n"^^xsd:nonNegativeInteger .
+function _parse_min_cardinality!(g, decls, exprs, t)
+    t.predicate == owl.minCardinality || return
 
-    n = match(r"^\\\"(.+)\\\"", g.names[t.o])[1] |> x -> parse(Int, x)
+    _restriction(g, t)
 
-    prop = get(decls, first(find_owl_on_property_nodes(g, nodes)).o, nothing)
+    n = match(r"^\\\"(.+)\\\"", string(t.object))[1] |> x -> parse(Int, x)
+
+    prop = get(decls, _on_property(g, t), nothing)
     if prop isa OPExpression
-        exprs[t.s] = ObjectMaxCardinality(n = n, ope = prop)
+        exprs[t.subject] = ObjectMinCardinality(n = n, ope = prop)
     elseif prop isa DPExpression
-        exprs[t.s] = DataMaxCardinality(n = n, dpe = prop)
+        exprs[t.subject] = DataMinCardinality(n = n, dpe = prop)
     else
-        @warn "unknown property: $prop"
+        throw(FormatError("$t"))
     end
 end
 
-function parse_max_qualified_cardinality(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_MAX_QUALIFIED_CARDINALITY) && return 
-    nodes = filter(x -> t.s == x.s, g.triples)
-    @assert !isempty(find_owl_restriction_nodes(g, nodes))
+# ObjectMinCardinality( n OPE CE )
+# _:x rdf:type owl:Restriction .
+# _:x owl:onProperty T(OPE) .
+# _:x owl:minQualifiedCardinality "n"^^xsd:nonNegativeInteger .
+# _:x owl:onClass T(CE) .
+#
+# DataMinCardinality( n DPE DR )
+# _:x rdf:type owl:Restriction .
+# _:x owl:onProperty T(DPE) .
+# _:x owl:minQualifiedCardinality "n"^^xsd:nonNegativeInteger .
+# _:x owl:onDataRange T(DR) .
+function _parse_min_qualified_cardinality!(g, decls, exprs, t)
+    t.predicate == owl.minQualifiedCardinality || return
 
-    prop = first(find_owl_on_property_nodes(g, nodes))
+    _restriction(g, t)
 
-    n = match(r"^\\\"(.+)\\\"", g.names[t.o])[1] |> x -> parse(Int, x)
+    n = match(r"^\\\"(.+)\\\"", string(t.object))[1] |> x -> parse(Int, x)
 
-    classes = find_owl_on_class_nodes(g, nodes)
-    if !isempty(classes)
-        ce = gen_class(g, first(classes).o)
-        ope = ObjectProperty(g.names[prop.o])
-        exprs[t.s] = ObjectMaxCardinality(n = n, ope = ope, ce = ce)
-    end
-
-    datatypes = find_owl_on_data_range_nodes(g, nodes)
-    if !isempty(datatypes)
-        dt = gen_datatype(g, datatypes[1].o)
-        dpe = DataProperty(g.names[prop.o]) 
-        exprs[t.s] = DataMaxCardinality(n = n, dpe = dpe, dr = dt)
-    end
-end
-
-function parse_exact_cardinality(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_CARDINALITY) && return 
-    nodes = filter(x -> t.s == x.s, g.triples)
-    @assert !isempty(find_owl_restriction_nodes(g, nodes))
-
-    n = match(r"^\\\"(.+)\\\"", g.names[t.o])[1] |> x -> parse(Int, x)
-
-    prop = get(decls, first(find_owl_on_property_nodes(g, nodes)).o, nothing)
+    prop = get(decls, _on_property(g, t), nothing)
     if prop isa OPExpression
-        exprs[t.s] = ObjectExactCardinality(n = n, ope = prop)
+        class = match(g;
+                      subject = t.subject,
+                      predicate = owl.onClass,)
+        isempty(class) && throw(FormatError("$t owl:onClass is missing"))
+        class = first(class)
+        ce = get(decls, class.object, Class(class.object))
+        exprs[t.subject] = ObjectMinCardinality(n = n, ope = prop, ce = ce)
     elseif prop isa DPExpression
-        exprs[t.s] = DataExactCardinality(n = n, dpe = prop)
+        dt = match(g;
+                   subject = t.subject,
+                   predicate = owl.onDataRange)
+        isempty(dt) && throw(FormatError("$t owl:onDataRange is missing"))
+        dt = first(dt)
+        dt = get(decls, dt.object, DataType(dt.object))
+        exprs[t.subject] = DataMinCardinality(n = n, dpe = prop, dr = dt)
     else
-        @warn "unknown property: $prop"
+        throw(FormatError("$t $prop is unknown"))
     end
 end
 
-function parse_exact_qualified_cardinality(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_QUALIFIED_CARDINALITY) && return 
-    nodes = filter(x -> t.s == x.s, g.triples)
-    @assert !isempty(find_owl_restriction_nodes(g, nodes))
+# ObjectMaxCardinality( n OPE CE )
+#_:x rdf:type owl:Restriction .
+# _:x owl:onProperty T(OPE) .
+# _:x owl:maxCardinality "n"^^xsd:nonNegativeInteger .
+#
+# DataMaxCardinality( n DPE )
+# _:x rdf:type owl:Restriction .
+# _:x owl:onProperty T(DPE) .
+# _:x owl:maxCardinality "n"^^xsd:nonNegativeInteger .
+function _parse_max_cardinality!(g, decls, exprs, t)
+    t.predicate == owl.maxCardinality || return
 
-    prop = first(find_owl_on_property_nodes(g, nodes))
+    _restriction(g, t)
 
-    n = match(r"^\\\"(.+)\\\"", g.names[t.o])[1] |> x -> parse(Int, x)
+    n = match(r"^\\\"(.+)\\\"", string(t.object))[1] |> x -> parse(Int, x)
 
-    classes = find_owl_on_class_nodes(g, nodes)
-    if !isempty(classes)
-        ce = gen_class(g, classes[1].o)
-        ope = ObjectProperty(g.names[prop.o])
-        exprs[t.s] = ObjectExactCardinality(n = n, ope = ope, ce = ce)
-    end
-
-    datatypes = find_owl_on_data_range_nodes(g, nodes)
-    if !isempty(datatypes)
-        dt = gen_datatype(g, datatypes[1].o)
-        dpe = DataProperty(g.names[prop.o]) 
-        exprs[t.s] = DataExactCardinality(n = n, dpe = dpe, dr = dt)
-    end
-end
-
-function parse_inverse_of(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_INVERSE_OF) && return 
-
-    if is_b_node(g, t.s)
-        ope = ObjectProperty(g.names[t.o])
-        exprs[t.s] = ObjectInverseOf(ope = ope) 
+    prop = get(decls, _on_property(ts), nothing)
+    if prop isa OPExpression
+        exprs[t.subject] = ObjectMaxCardinality(n = n, ope = prop)
+    elseif prop isa DPExpression
+        exprs[t.subject] = DataMaxCardinality(n = n, dpe = prop)
+    else
+        throw(FormatError("$t $prop is unknown"))
     end
 end
 
-function parse_with_restrictions(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_WITH_RESTRICTIONS) && return
+# ObjectMaxCardinality( n OPE CE )
+# _:x rdf:type owl:Restriction .
+# _:x owl:onProperty T(OPE) .
+# _:x owl:maxQualifiedCardinality "n"^^xsd:nonNegativeInteger .
+# _:x owl:onClass T(CE) .
+#
+# DataMaxCardinality( n DPE DR )
+# _:x rdf:type owl:Restriction .
+# _:x owl:onProperty T(DPE) .
+# _:x owl:maxQualifiedCardinality "n"^^xsd:nonNegativeInteger .
+# _:x owl:onDataRange T(DR) .
+function _parse_max_qualified_cardinality!(g, decls, exprs, t)
+    t.predicate == owl.maxQualifiedCardinality || return
 
-    nodes = filter(x -> t.s == x.s, g.triples)
-    datatypes = find_owl_on_datatype_nodes(g, nodes)
-    @assert !isempty(datatypes)
+    _restriction(g, t)
 
-    dt = gen_datatype(g, first(datatypes).o)
+    n = match(r"^\\\"(.+)\\\"", string(t.object))[1] |> x -> parse(Int, x)
 
-    if is_b_node(g, t.o)
-        chain_ids = Vector{UInt64}()
-        parse_chain_list!(g, t.o, chain_ids)
-        f_n = Vector{String}()
-        lt_n = Vector{Literal}()
-        for id in chain_ids
-            if is_b_node(g, id)
-                for n in filter(x -> x.s == id, g.triples)
-                    push!(f_n, g.names[n.p])
-                    push!(lt_n, Literal(g.names[n.p]))
+    prop = get(decls, _on_property(ts), nothing)
+    if prop isa OPExpression
+        class = match(g;
+                      subject = t.subject,
+                      predicate = owl.onClass)
+        isempty(class) && throw(FormatError("$t owl:onClass is missing"))
+        class = first(class)
+        ce = get(decls, class.object, Class(class.object))
+        exprs[t.subject] = ObjectMaxCardinality(n = n, ope = prop, ce = ce)
+    elseif prop isa DPExpression
+        dt = match(g;
+                   subject = t.subject,
+                   predicate = owl.onDataRange)
+        isempty(dt) && throw(FormatError("$t owl:onDataRange is missing"))
+        dt = first(dt)
+        dt = get(decls, dt.object, DataType(dt.object))
+        exprs[t.subject] = DataMaxCardinality(n = n, dpe = prop, dr = dt)
+    else
+        throw(FormatError("$t $prop is unknown"))
+    end
+end
+
+# ObjectExactCardinality( n OPE )
+# _:x rdf:type owl:Restriction .
+# _:x owl:onProperty T(OPE) .
+# _:x owl:cardinality "n"^^xsd:nonNegativeInteger .
+#
+# DataExactCardinality( n DPE )
+# _:x rdf:type owl:Restriction .
+# _:x owl:onProperty T(DPE) .
+# _:x owl:cardinality "n"^^xsd:nonNegativeInteger .
+function _parse_exact_cardinality!(g, decls, exprs, t)
+    t.predicate == owl.cardinality || return
+
+    _restriction(g, t)
+
+    n = match(r"^\\\"(.+)\\\"", string(t.object))[1] |> x -> parse(Int, x)
+
+    prop = get(decls, _on_property(ts), nothing)
+    if prop isa OPExpression
+        exprs[t.subject] = ObjectExactCardinality(n = n, ope = prop)
+    elseif prop isa DPExpression
+        exprs[t.subject] = DataExactCardinality(n = n, dpe = prop)
+    else
+        throw(FormatError("$t $prop is unknown"))
+    end
+end
+
+# ObjectExactCardinality( n OPE CE )
+# _:x rdf:type owl:Restriction .
+# _:x owl:onProperty T(OPE) .
+# _:x owl:qualifiedCardinality "n"^^xsd:nonNegativeInteger .
+# _:x owl:onClass T(CE) .
+#
+# DataExactCardinality( n DPE DR )
+# _:x rdf:type owl:Restriction .
+# _:x owl:onProperty T(DPE) .
+# _:x owl:qualifiedCardinality "n"^^xsd:nonNegativeInteger .
+# _:x owl:onDataRange T(DR) .
+function _parse_exact_qualified_cardinality!(g, decls, exprs, t)
+    t.predicate == owl.qualifiedCardinality || return
+
+    _restriction(g, t)
+
+    n = match(r"^\\\"(.+)\\\"", string(t.object))[1] |> x -> parse(Int, x)
+
+    prop = get(decls, _on_property(ts), nothing)
+    if prop isa OPExpression
+        class = match(g;
+                      subject = t.subject,
+                      predicate = owl.onClass)
+        isempty(classes) && throw(FormatError("$t owl:onClass is missing"))
+        class = first(class)
+        ce = get(decls, class.object, Class(class.object))
+        exprs[t.subject] = ObjectExactCardinality(n = n, ope = prop, ce = ce)
+    elseif prop isa DPExpression
+        dt = match(g;
+                   subject = t.subject,
+                   predicate = owl.onDataRange)
+        isempty(dts) && throw(FormatError("$t owl:onDataRange is missing"))
+        dt = first(dt)
+        dt = get(decls, dt.object, DataType(dt.object))
+        exprs[t.subject] = DataExactCardinality(n = n, dpe = prop, dr = dt)
+    else
+        throw(FormatError("$t $prop is unknown"))
+    end
+end
+
+# ObjectInverseOf( OP )
+# _:x owl:inverseOf T(OP) .
+function _parse_inverse_of!(g, decls, exprs, t)
+    t.predicate == owl.inverseOf || return
+    t.subject isa BlankNode || return
+
+    ope = get(decls, t.object, ObjectProperty(t.object))
+    exprs[t.subject] = ObjectInverseOf(ope = ope) 
+end
+
+# DatatypeRestriction( DT F1 lt1 ... Fn ltn)
+# _:x rdf:type rdfs:Datatype .
+# _:x owl:onDatatype T(DT) .
+# _:x owl:withRestrictions T(SEQ _:y1 ... _:yn) .
+# _:y1 F1 lt1 .
+# ...
+# _:yn Fn ltn .
+function _parse_with_restrictions!(g, decls, exprs, t)
+    t.predicate == owl.withRestrictions || return
+
+    dt = match(g;
+               subject = t.subject,
+               predicate = rdf.type,
+               object = rdfs.Datatype)
+    isempty(dt) && throw(FormatError("$t rdfs:Datatype is missing"))
+
+    dt = match(g;
+               subject = t.subject,
+               predicate = owl.onDatatype)
+    isempty(dt) && throw(FormatError("$t owl.onDatatype is missing"))
+    dt = first(dt)
+    dt = get(decls, dt.object, DataType(dt.object))
+
+    f_n = RDFTerm[]
+    lt_n = Literal[]
+    if t.object isa BlankNode
+        terms = RDFTerm[]
+        parse_chain_list!(g, t.object, terms)
+        for term in terms
+            if term isa BlankNode
+                for n in match(g; subject = term)
+                    push!(f_n, n.predicate)
+                    push!(lt_n, Literal(n.object))
                 end
             end
         end
-        exprs[t.s] = DataTypeRestriction(dt = dt, f_n = f_n, lt_n = lt_n)
     end
+    isempty(f_n) && throw(FormatError("$t f_n is empty"))
+    isempty(lt_n) && throw(FormatError("$t lt_n is empty"))
+    exprs[t.subject] = DataTypeRestriction(dt = dt, f_n = f_n, lt_n = lt_n)
+end
+
+# _:x rdf:type owl:Restriction .
+function _restriction(g, t)
+    restriction = match(g;
+                        subject = t.subject,
+                        predicate = rdf.type,
+                        object = owl.Restriction)
+    isempty(restriction) && throw(FormatError("$t owl:Restriction is missing"))
+    return first(restriction)
+end
+
+# _:x owl:onProperty T(?) .
+function _on_property(g, t)
+    prop = match(g;
+                 subject = t.subject,
+                 predicate = owl.onProperty)
+    isempty(prop) && throw(FormatError("$t owl:onProperty"))
+    prop = first(prop)
+    return prop.object
+end
+
+# _:x owl:onProperty T(OPE) .
+function _object_on_property(g, decls, t)
+    # object property
+    prop = match(g;
+                 subject = t.subject,
+                 predicate = owl.onProperty)
+    isempty(prop) && throw(FormatError("$t owl:onProperty"))
+    prop = first(prop)
+    return get(decls, prop.object, ObjectProperty(prop.object))
+end
+
+# _:x owl:onProperty T(DPE) .
+# _:x owl:onProperties T(SEQ DPE1 ... DPEn) .
+function _data_on_properties(g, decls, t)
+    prop = match(g;
+                 subject = t.subject,
+                 predicate = owl.onProperty)
+    if isempty(prop)
+        prop = match(g;
+                     subject = t.subject,
+                     predicate = owl.onProperties)
+    end
+    isempty(prop) && throw(FormatError("$t owl:onProperty/owl:onProperties"))
+    prop = first(prop)
+
+    dpe_n = DPExpression[]
+    if prop.object isa BlankNode
+        terms = RDFTerm[]
+        parse_chain_list!(g, prop.object, terms)
+        for term in terms
+            dpe = get(decls, term, DataProperty(term))
+            push!(dpe_n, dpe)
+        end
+    else
+        dpe = get(decls, prop.object, DataProperty(prop.object))
+        push!(dpe_n, dpe)
+    end
+    return dpe_n
+end
+
+#
+# T(SEQ CE_1 ... CE_n)
+#
+function _sequence_of_class_expressions(g, decls, node)
+    ce_n = CExpression[]
+    if node isa BlankNode
+        terms = RDFTerm[]
+        parse_chain_list!(g, node, terms)
+        for term in terms
+            ce = get(decls, term, Class(term))
+            push!(ce_n, ce)
+        end
+    end
+    isempty(ce_n) && throw(FormatError("$node ce_n is empty"))
+    return ce_n
+end
+
+#
+# T(SEQ DR_1 ... DR_n)
+#
+function _sequence_of_data_ranges(g, decls, node)
+    dr_n = DataRange[]
+    if node isa BlankNode
+        terms = RDFTerm[]
+        parse_chain_list!(g, node, terms)
+        for term in terms
+            dr = get(decls, term, DataType(term))
+            push!(dr_n, dr)
+        end
+    end
+    isempty(dr_n) && throw(FormatError("$node dr_n is empty"))
+    return dr_n
 end

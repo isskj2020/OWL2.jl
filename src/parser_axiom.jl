@@ -3,161 +3,171 @@
 # https://www.w3.org/TR/owl2-mapping-to-rdf/
 #
 
-function parse_axioms(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    parse_sub_class_of(g, decls, exprs, axioms, t)
-    parse_equivalent_class(g, decls, exprs, axioms, t)
-    parse_equivalent_property(g, decls, exprs, axioms, t)
-    parse_disjoint_with(g, decls, exprs, axioms, t)
-    parse_disjoint_union_of(g, decls, exprs, axioms, t)
-    parse_all_disjoint_classes(g, decls, exprs, axioms, t)
-    parse_property_disjoint_with(g, decls, exprs, axioms, t)
-    parse_sub_property_of(g, decls, exprs, axioms, t)
-    parse_property_chain_axiom(g, decls, exprs, axioms, t)
-    parse_domain(g, decls, exprs, axioms, t)
-    parse_range(g, decls, exprs, axioms, t)
-    parse_inverse_of(g, decls, exprs, axioms, t)
-    parse_functional_property(g, decls, exprs, axioms, t)
-    parse_inverse_functional_property(g, decls, exprs, axioms, t)
-    parse_reflexive_property(g, decls, exprs, axioms, t)
-    parse_irreflexive_property(g, decls, exprs, axioms, t)
-    parse_symmetric_property(g, decls, exprs, axioms, t)
-    parse_asymmetric_property(g, decls, exprs, axioms, t)
-    parse_transitive_property(g, decls, exprs, axioms, t)
-    parse_has_key(g, decls, exprs, axioms, t)
-    parse_same_as(g, decls, exprs, axioms, t)
-    parse_different_from(g, decls, exprs, axioms, t)
-    parse_all_different(g, decls, exprs, axioms, t)
-    parse_class_assertion(g, decls, exprs, axioms, t)
-    parse_object_property_assertion(g, decls, exprs, axioms, t)
-    parse_data_property_assertion(g, decls, exprs, axioms, t)
-    parse_negative_property_assertion(g, decls, exprs, axioms, t)
-    parse_deprecated_class(g, decls, exprs, axioms, t)
-    parse_deprecated_property(g, decls, exprs, axioms, t)
+function _parse_axioms!(g, decls, exprs, axioms, t)
+    _parse_sub_class_of!(g, decls, exprs, axioms, t)
+    _parse_equivalent_class!(g, decls, exprs, axioms, t)
+    _parse_equivalent_property!(g, decls, exprs, axioms, t)
+    _parse_disjoint_with!(g, decls, exprs, axioms, t)
+    _parse_disjoint_union_of!(g, decls, exprs, axioms, t)
+    _parse_all_disjoint_classes!(g, decls, exprs, axioms, t)
+    _parse_property_disjoint_with!(g, decls, exprs, axioms, t)
+    _parse_sub_property_of!(g, decls, exprs, axioms, t)
+    _parse_property_chain_axiom!(g, decls, exprs, axioms, t)
+    _parse_domain!(g, decls, exprs, axioms, t)
+    _parse_range!(g, decls, exprs, axioms, t)
+    _parse_inverse_of!(g, decls, exprs, axioms, t)
+    _parse_functional_property!(g, decls, exprs, axioms, t)
+    _parse_inverse_functional_property!(g, decls, exprs, axioms, t)
+    _parse_reflexive_property!(g, decls, exprs, axioms, t)
+    _parse_irreflexive_property!(g, decls, exprs, axioms, t)
+    _parse_symmetric_property!(g, decls, exprs, axioms, t)
+    _parse_asymmetric_property!(g, decls, exprs, axioms, t)
+    _parse_transitive_property!(g, decls, exprs, axioms, t)
+    _parse_has_key!(g, decls, exprs, axioms, t)
+    _parse_same_as!(g, decls, exprs, axioms, t)
+    _parse_different_from!(g, decls, exprs, axioms, t)
+    _parse_all_different!(g, decls, exprs, axioms, t)
+    _parse_class_assertion!(g, decls, exprs, axioms, t)
+    _parse_object_property_assertion!(g, decls, exprs, axioms, t)
+    _parse_data_property_assertion!(g, decls, exprs, axioms, t)
+    _parse_negative_property_assertion!(g, decls, exprs, axioms, t)
+    _parse_deprecated_class!(g, decls, exprs, axioms, t)
+    _parse_deprecated_property!(g, decls, exprs, axioms, t)
 end
 
-function parse_declaration(g::Graph, decls::Dict{UInt64, Any}, axioms::Vector{Axiom})
-    for (id, d) in decls
-        if d isa Class || d isa DataType || 
-            d isa ObjectProperty || d isa DataProperty || 
-            d isa AnnotationProperty || d isa NamedIndividual
-            push!(axioms, Declaration(e = d))
-        end
-    end
-end
+# T(CE1) rdfs:subClassOf T(CE2) .
+function _parse_sub_class_of!(g, decls, exprs, axioms, t)
+    t.predicate == rdfs.subClassOf || return
 
-function parse_sub_class_of(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    t.p != term_id(g, TERM_RDFS_SUB_CLASS_OF) && return
-
-    ce1 = get(exprs, t.s, get(decls, t.s, nothing))
-    ce2 = get(exprs, t.o, get(decls, t.o, nothing))
+    ce1 = get(exprs, t.subject, get(decls, t.subject, nothing))
+    ce2 = get(exprs, t.object, get(decls, t.object, nothing))
     if ce1 isa CExpression && ce2 isa CExpression
         push!(axioms, SubClassOf(ce1 = ce1, ce2 = ce2)) 
     else
-        @warn "unkown axiom ce1:$ce1 ce2:$ce2 t:$(string_triple(g, t))"
+        throw(FormatError("$t T($ce1) rdfs:subClassOf T($ce2)"))
     end
 end
 
-function parse_equivalent_class(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_EQUIVALENT_CLASS) && return
+# T(CE1) owl:equivalentClass T(CE2) .
+# T(DT) owl:equivalentClass T(DR) .
+function _parse_equivalent_class!(g, decls, exprs, axioms, t)
+    t.predicate == owl.equivalentClass || return
 
-    sub = get(exprs, t.s, get(decls, t.s, nothing))
-    if sub isa CExpression
-        obj = gen_class(g, t.o)
+    sub = get(exprs, t.subject, get(decls, t.subject, nothing))
+    obj = get(exprs, t.object, get(decls, t.object, nothing))
+    if sub isa CExpression && obj isa CExpression
         push!(axioms, EquivalentClasses(ce_n = [sub, obj]))
-    elseif sub isa DataRange
-        dr = DataType(g.names[t.o])
+    elseif sub isa DataRange && obj isa DataRange
         push!(axioms, DatatypeDefinition(dt = sub, dr = dr))
     else
-        @warn "unknown axiom s:$sub t:$(string_triple(g, t))"
+        throw(FormatError("$t T($sub) owl:equivalentClass T($obj)"))
     end
 end
 
-function parse_equivalent_property(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_EQUIVALENT_PROPERTY) && return
+# T(OPE1) owl:equivalentProperty T(OPE2) .
+# T(DPE1) owl:equivalentProperty T(DPE2) .
+function _parse_equivalent_property!(g, decls, exprs, axioms, t)
+    t.predicate == owl.equivalentProperty || return
 
-    sub = get(exprs, t.s, get(decls, t.s, nothing))
-    obj = get(exprs, t.o, get(decls, t.o, nothing))
+    sub = get(exprs, t.subject, get(decls, t.subject, nothing))
+    obj = get(exprs, t.object, get(decls, t.object, nothing))
     if sub isa OPExpression && obj isa OPExpression
         push!(axioms, EquivalentObjectProperties(ope_n = [sub, obj]))
     elseif sub isa DPExpression && obj isa DPExpression
         push!(axioms, EquivalentDataProperties(dpe_n = [sub, obj]))
     else
-        @warn "unknown axiom s:$sub o:$obj t:$(string_triple(g, t))"
+        throw(FormatError("$t T($sub) owl:equivalentProperty T($obj)"))
     end
 end
 
-function parse_disjoint_with(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_DISJOINT_WITH) && return
+# T(CE1) owl:disjointWith T(CE2) .
+function _parse_disjoint_with!(g, decls, exprs, axioms, t)
+    t.predicate == owl.disjointWith || return
 
-    ce1 = get(exprs, t.s, get(decls, t.s, nothing))
-    ce2 = get(exprs, t.o, get(decls, t.o, nothing))
+    ce1 = get(exprs, t.subject, get(decls, t.subject, nothing))
+    ce2 = get(exprs, t.object, get(decls, t.object, nothing))
     if ce1 isa CExpression && ce2 isa CExpression
         push!(axioms, DisjointClasses(ce_n = [ce1, ce2])) 
     else
-        @warn "unkown axiom ce1:$ce1 ce2:$ce2 t:$(string_triple(g, t))"
+        throw(FormatError("$t T($ce1) owl:disjointWith T($ce2)"))
     end
 end
 
-function parse_all_disjoint_classes(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    t.o != term_id(g, TERM_OWL_ALL_DISJOINT_CLASSES) && return
+# _:x rdf:type owl:AllDisjointClasses .
+# _:x owl:members T(SEQ CE1 ... CEn) .
+function _parse_all_disjoint_classes!(g, decls, exprs, axioms, t)
+    t.object == owl.AllDisjointClasses || return
 
-    nodes = filter(x -> t.s == x.s, g.triples)
-    ce_n = Vector{CExpression}()
-    for n in nodes
-        if t.s == n.s && is_b_node(g, n.s) && is_b_node(g, n.o)
-            chain_ids = Vector{UInt64}()
-            parse_chain_list!(g, n.o, chain_ids)
-            for id in chain_ids
-                push!(ce_n, gen_class(g, id))
-            end
+    members = collect(match(g; subject = t.subject, predicate = owl.members))
+    if isempty(members)
+        throw(FormatError("$t owl:members is empty"))
+    end
+    members = first(members)
+    ce_n = CExpression[]
+    if members.object isa BlankNode
+        terms = RDFTerm[]
+        parse_chain_list!(g, members.object, terms)
+        for term in terms
+            ce = get(exprs, term, get(decls, term, Class(term)))
+            push!(ce_n, ce)
         end
+    end
+    if isempty(ce_n)
+        throw(FormatError("$t ce_n is empty"))
     end
     push!(axioms, DisjointClasses(ce_n = ce_n))
 end
 
-function parse_disjoint_union_of(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_DISJOINT_UNION_OF) && return
+# T(C) owl:disjointUnionOf T(SEQ CE1 ... CEn) .
+function _parse_disjoint_union_of!(g, decls, exprs, axioms, t)
+    t.predicate == owl.disjointUnionOf || return
 
-    nodes = filter(x -> t.s == x.s, g.triples)
-    ce_n = Vector{CExpression}()
-    c = nothing
-    for n in nodes
-        if is_class(g, n)
-            c = gen_class(g, n.s)
-        elseif is_b_node(g, n.o)
-            chain_ids = Vector{UInt64}()
-            parse_chain_list!(g, n.o, chain_ids)
-            for id in chain_ids
-                push!(ce_n, gen_class(g, id))
-            end
+    ce = get(exprs, t.subject, get(decls, t.subject, nothing))
+    if ce == nothing
+        ce = Class(t.subject)
+    end
+    if !(ce isa CExpression)
+        throw(FormatError("$t $ce is not CExpression"))
+    end
+    ce_n = CExpression[]
+    if t.object isa BlankNode
+        terms = RDFTerm[]
+        parse_chain_list!(g, t.object, terms)
+        for term in terms
+            ce = get(exprs, term, get(decls, term, Class(term)))
+            push!(ce_n, ce)
         end
     end
-    if c isa CExpression && !isempty(ce_n)
-        push!(axioms, DisjointUnion(c = c, ce_n = ce_n))
-    else
-        @warn "unknown axiom t:$(string_triple(g, t))"
+    if isempty(ce_n)
+        throw(FormatError("$t ce_n is empty"))
     end
+    push!(axioms, DisjointUnion(c = c, ce_n = ce_n))
 end
 
-function parse_property_disjoint_with(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_PROPERTY_DISJOINT_WITH) && return
+# T(OPE1) owl:propertyDisjointWith T(OPE2) .
+# T(DPE1) owl:propertyDisjointWith T(DPE2) .
+function _parse_property_disjoint_with!(g, decls, exprs, axioms, t)
+    t.predicate == owl.propertyDisjointWith || return
 
-    sub = get(exprs, t.s, get(decls, t.s, nothing))
-    obj = get(exprs, t.o, get(decls, t.o, nothing))
+    sub = get(exprs, t.subject, get(decls, t.subject, nothing))
+    obj = get(exprs, t.object, get(decls, t.object, nothing))
     if sub isa OPExpression && obj isa OPExpression
         push!(axioms, DisjointObjectProperties(ope_n = [sub, obj]))
     elseif sub isa DPExpression && obj isa DPExpression
         push!(axioms, DisjointDataProperties(dpe_n = [sub, obj]))
     else
-        @warn "unkown axiom s:$sub o:$obj t:$(string_triple(g, t))"
+        throw(FormatError("$t T($sub) owl:propertyDisjointWith T($obj)"))
     end
 end
 
-function parse_sub_property_of(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    t.p != term_id(g, TERM_RDFS_SUB_PROPERTY_OF) && return
+# T(OPE1) rdfs:subPropertyOf T(OPE2) .
+# T(DPE1) rdfs:subPropertyOf T(DPE2) .
+# T(AP1) rdfs:subPropertyOf T(AP2) .
+function _parse_sub_property_of!(g, decls, exprs, axioms, t)
+    t.predicate == rdfs.subPropertyOf || return
 
-    sub = get(exprs, t.s, get(decls, t.s, nothing))
-    obj = get(exprs, t.o, get(decls, t.o, nothing))
+    sub = get(exprs, t.subject, get(decls, t.subject, nothing))
+    obj = get(exprs, t.object, get(decls, t.object, nothing))
     if sub isa OPExpression && obj isa OPExpression
         push!(axioms, SubObjectPropertyOf(ope1 = sub, ope2 = obj)) 
     elseif sub isa DPExpression && obj isa DPExpression
@@ -165,271 +175,323 @@ function parse_sub_property_of(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{U
     elseif sub isa AnnotationProperty && obj isa AnnotationPropert
         push!(axioms, SubAnnotationPropertyOf(ap1 = sub, api2 = obj)) 
     else
-        @warn "unkown axiom s:$sub o:$obj t:$(string_triple(g, t))"
+        throw(FormatError("$t T($sub) rdfs.subPropertyOf T($obj)"))
     end
 end
 
-function parse_property_chain_axiom(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_PROPERTY_CHAIN_AXIOM) && return
+# T(OPE) owl:propertyChainAxiom T(SEQ OPE1 ... OPEn) .
+function _parse_property_chain_axiom!(g, decls, exprs, axioms, t)
+    t.predicate == owl.propertyChainAxiom || return
 
-    sub = get(exprs, t.s, get(decls, t.s, nothing))
-    ope_n = Vector{OPExpression}()
-    if sub isa OPExpression && is_b_node(g, t.o)
-        chain_ids = Vector{UInt64}()
-        parse_chain_list!(g, t.o, chain_ids)
-        for id in chain_ids
-            obj = get(exprs, id, get(decls, id, nothing))
-            if obj isa OPExpression
-                push!(ope_n, obj)
-            else
-                push!(ope_n, ObjectProperty(g.names[id]))
-            end
+    ope = get(exprs, t.subject, get(decls, t.subject, nothing))
+    if ope == nothing
+        ope = ObjectProperty(t.subject)
+    end
+    if !(ope isa OPExpression)
+        throw(FormatError("$t $ope is not OPExpression"))
+    end
+    ope_n = OPExpression[]
+    if t.object isa BlankNode
+        terms = RDFTerm[]
+        parse_chain_list!(g, t.object, terms)
+        for term in terms
+            op = get(exprs, term, get(decls, term, ObjectProperty(term)))
+            push!(ope_n, ObjectProperty(term))
         end
-        push!(axioms, SubObjectPropertyOf(ope1 = ObjectPropertyChain(ope_n), ope2 = sub)) 
-    else
-        @warn "unkown axiom t:$(string_triple(g, t))"
     end
+    if isempty(ope_n)
+        throw(FormatError("$t ope_n is empty"))
+    end
+    push!(axioms, SubObjectPropertyOf(ope1 = ObjectPropertyChain(ope_n), ope2 = ope)) 
 end
 
-function parse_domain(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    t.p != term_id(g, TERM_RDFS_DOMAIN) && return
+# T(OPE) rdfs:domain T(CE) .
+# T(DPE) rdfs:domain T(CE) .
+# T(AP) rdfs:domain T(U) .
+function _parse_domain!(g, decls, exprs, axioms, t)
+    t.predicate == rdfs.domain || return
 
-    sub = get(exprs, t.s, get(decls, t.s, nothing))
+    sub = get(exprs, t.subject, get(decls, t.subject, nothing))
     if sub isa OPExpression
-        ce = gen_class(g, t.o)
+        ce = get(exprs, t.object, get(decls, t.object, Class(t.object)))
         push!(axioms, ObjectPropertyDomain(ope = sub, ce = ce))
     elseif sub isa DPExpression
-        ce = gen_class(g, t.o)
+        ce = get(exprs, t.object, get(decls, t.object, Class(t.object)))
         push!(axioms, DataPropertyDomain(dpe = sub, ce = ce))
     elseif sub isa AnnotationProperty
-        u = g.names[t.o] 
+        u = string(t.object)
         push!(axioms, AnnotationPropertyDomain(ap = sub, u = u))
     else
-        @warn "unkown axiom s:$sub o:$obj t:$(string_triple(g, t))"
+        throw(FormatError("$t T($sub) rdfs.domain"))
     end
 end
 
-function parse_range(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    t.p != term_id(g, TERM_RDFS_RANGE) && return
+# T(OPE) rdfs:range T(CE) .
+# T(DPE) rdfs:range T(DR) .
+# T(AP) rdfs:range T(U) .
+function _parse_range!(g, decls, exprs, axioms, t)
+    t.predicate == rdfs.range || return
 
-    sub = get(exprs, t.s, get(decls, t.s, nothing))
+    sub = get(exprs, t.subject, get(decls, t.subject, nothing))
     if sub isa OPExpression
-        ce = gen_class(g, t.o)
+        ce = get(exprs, t.object, get(decls, t.object, Class(t.object)))
         push!(axioms, ObjectPropertyRange(ope = sub, ce = ce))
     elseif sub isa DPExpression
-        dr = gen_datatype(g, t.o)
+        dr = get(exprs, t.object, get(decls, t.object, DataType(t.object)))
         push!(axioms, DataPropertyRange(dpe = sub, dr = dr))
     elseif sub isa AnnotationProperty
-        u = g.names[t.o]
+        u = string(t.object)
         push!(axioms, AnnotationPropertyRange(ap = sub, u = u))
     else
-        @warn "unkown axiom s:$sub o:$obj t:$(string_triple(g, t))"
+        throw(FormatError("$t T($sub) rdfs.range"))
     end
 end
 
-function parse_inverse_of(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_INVERSE_OF) && return
+# _:x owl:inverseOf T(OP) .
+# T(OPE1) owl:inverseOf T(OPE2) .
+function _parse_inverse_of!(g, decls, exprs, axioms, t)
+    (t.predicate == owl.inverseOf && !(t.subject isa BlankNode)) || return
 
-    sub = get(exprs, t.s, get(decls, t.s, nothing))
-    if sub isa OPExpression
-        obj = ObjectProperty(g.names[t.o])
+    sub = get(exprs, t.subject, get(decls, t.subject, nothing))
+    obj = get(exprs, t.object, get(decls, t.object, nothing))
+    if sub isa OPExpression && obj isa OPExpression
         push!(axioms, InverseObjectProperties(ope1 = sub, ope2 = obj))
     else
-        @warn "unkown axiom s:$sub t:$(string_triple(g, t))"
+        throw(FormatError("$t T($sub) owl:inverseOf T($obj)"))
     end
 end
 
-function parse_functional_property(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    (t.p != term_id(g, TERM_RDF_TYPE) || 
-     t.o != term_id(g, TERM_OWL_FUNCTIONAL_PROPERTY)) && return
+# T(OPE) rdf:type owl:FunctionalProperty .
+# T(DPE) rdf:type owl:FunctionalProperty .
+function _parse_functional_property!(g, decls, exprs, axioms, t)
+    (t.predicate == rdf.type && t.object == owl.FunctionalProperty) || return
 
-    sub = get(exprs, t.s, get(decls, t.s, nothing))
+    sub = get(exprs, t.subject, get(decls, t.subject, nothing))
     if sub isa OPExpression
         push!(axioms, FunctionalObjectProperty(ope = sub))
     elseif sub isa DPExpression
         push!(axioms, FunctionalDataProperty(dpe = sub))
     else
-        @warn "unkown axiom s:$sub t:$(string_triple(g, t))"
+        throw(FormatError("$t T($sub)"))
     end
 end
 
-function parse_inverse_functional_property(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    (t.p != term_id(g, TERM_RDF_TYPE) || 
-     t.o != term_id(g, TERM_OWL_INVERSE_FUNCTIONAL_PROPERTY)) && return
+# T(OPE) rdf:type owl:InverseFunctionalProperty .
+function _parse_inverse_functional_property!(g, decls, exprs, axioms, t)
+    (t.predicate == rdf.type && t.object == owl.InverseFunctionalProperty) || return
 
-    ope = ObjectProperty(g.names[t.s])
+    ope = get(exprs, t.subject, get(decls, t.subject, ObjectProperty(t.subject)))
     push!(axioms, InverseFunctionalObjectProperty(ope = ope))
 end
 
-function parse_reflexive_property(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    (t.p != term_id(g, TERM_RDF_TYPE) || 
-     t.o != term_id(g, TERM_OWL_REFLEXIVE_PROPERTY)) && return
+# T(OPE) rdf:type owl:ReflexiveProperty .
+function _parse_reflexive_property!(g, decls, exprs, axioms, t)
+    (t.predicate == rdf.type && t.object == owl.ReflexiveProperty) || return
 
-    ope = ObjectProperty(g.names[t.s])
+    ope = get(exprs, t.subject, get(decls, t.subject, ObjectProperty(t.subject)))
     push!(axioms, ReflexiveObjectProperty(ope = ope))
 end
 
-function parse_irreflexive_property(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    (t.p != term_id(g, TERM_RDF_TYPE) || 
-     t.o != term_id(g, TERM_OWL_IRREFLEXIVE_PROPERTY)) && return
+# T(OPE) rdf:type owl:IrreflexiveProperty .
+function _parse_irreflexive_property!(g, decls, exprs, axioms, t)
+    (t.predicate == rdf.type && t.object == owl.IrreflexiveProperty) || return
 
-    ope = ObjectProperty(g.names[t.s])
+    ope = get(exprs, t.subject, get(decls, t.subject, ObjectProperty(t.subject)))
     push!(axioms, IrreflexiveObjectProperty(ope = ope))
 end
 
-function parse_symmetric_property(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    (t.p != term_id(g, TERM_RDF_TYPE) || 
-     t.o != term_id(g, TERM_OWL_SYMMETRIC_PROPERTY)) && return
+# T(OPE) rdf:type owl:SymmetricProperty .
+function _parse_symmetric_property!(g, decls, exprs, axioms, t)
+    (t.predicate == rdf.type && t.object == owl.SymmetricProperty) || return
 
-    ope = ObjectProperty(g.names[t.s])
+    ope = get(exprs, t.subject, get(decls, t.subject, ObjectProperty(t.subject)))
     push!(axioms, SymmetricObjectProperty(ope = ope))
 end
 
-function parse_asymmetric_property(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    (t.p != term_id(g, TERM_RDF_TYPE) || 
-     t.o != term_id(g, TERM_OWL_ASYMMETRIC_PROPERTY)) && return
+# T(OPE) rdf:type owl:AsymmetricProperty .
+function _parse_asymmetric_property!(g, decls, exprs, axioms, t)
+    (t.predicate == rdf.type && t.object == owl.AsymmetricProperty) || return
 
-    ope = ObjectProperty(g.names[t.s])
+    ope = get(exprs, t.subject, get(decls, t.subject, ObjectProperty(t.subject)))
     push!(axioms, AsymmetricObjectProperty(ope = ope))
 end
 
-function parse_transitive_property(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    (t.p != term_id(g, TERM_RDF_TYPE) || 
-     t.o != term_id(g, TERM_OWL_ASYMMETRIC_PROPERTY)) && return
+# T(OPE) rdf:type owl:TransitiveProperty .
+function _parse_transitive_property!(g, decls, exprs, axioms, t)
+    (t.predicate == rdf.type && t.object == owl.TransitiveProperty) || return
 
-    ope = ObjectProperty(g.names[t.s])
+    ope = get(exprs, t.subject, get(decls, t.subject, ObjectProperty(t.subject)))
     push!(axioms, TransitiveObjectProperty(ope = ope))
 end
 
-function parse_has_key(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_HAS_KEY) && return 
+# T(CE) owl:hasKey T(SEQ OPE1 ... OPEm DPE1 ... DPEn ) .
+function _parse_has_key!(g, decls, exprs, axioms, t)
+    t.predicate == owl.hasKey || return
 
-    sub = get(exprs, t.s, get(decls, t.s, nothing))
-    if sub isa CExpression && is_b_node(g, t.o)
-        chain_ids = Vector{UInt64}()
-        parse_chain_list!(g, t.o, chain_ids)
+    ce = get(exprs, t.subject, get(decls, t.subject, Class(t.subject)))
+    if t.object isa BlankNode
+        terms = RDFTerm[]
+        parse_chain_list!(g, t.object, terms)
         ope_n = Vector{OPExpression}()
         dpe_n = Vector{DPExpression}()
-        for id in chain_ids
-            obj = get(exprs, id, get(decls, id, nothing))
+        for term in terms
+            obj = get(exprs, term, get(decls, term, nothing))
             if obj isa OPExpression
                 push!(ope_n, obj)
             elseif obj isa DPExpression
                 push!(dpe_n, obj)
             end
         end
-        push!(axioms, HasKey(ce = sub, ope_n = ope_n, dpe_n = dpe_n))
+        push!(axioms, HasKey(ce = ce, ope_n = ope_n, dpe_n = dpe_n))
     else
-        @warn "unkown axiom s:$sub t:$(string_triple(g, t))"
+        throw(FormatError("$t T($ce)"))
     end
 end
 
-function parse_same_as(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_SAME_AS) && return
+# T(a1) owl:sameAs T(a2) .
+function _parse_same_as!(g, decls, exprs, axioms, t)
+    t.predicate == owl.sameAs || return
 
-    sub = gen_individual(g, t.s)
-    obj = gen_individual(g, t.o)
+    sub = get(decls, t.subject, Individual(t.subject))
+    obj = get(decls, t.object, Individual(t.object))
     push!(axioms, SameIndividual(a_n = [sub, obj]))
 end
 
-function parse_different_from(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    t.p != term_id(g, TERM_OWL_DIFFERENT_FROM) && return
+# T(a1) owl:differentFrom T(a2) .
+function _parse_different_from!(g, decls, exprs, axioms, t)
+    t.predicate == owl.differentFrom || return
 
-    sub = gen_individual(g, t.s)
-    obj = gen_individual(g, t.o)
+    sub = get(decls, t.subject, Individual(t.subject))
+    obj = get(decls, t.object, Individual(t.object))
     push!(axioms, DifferentIndividuals(a_n = [sub, obj]))
 end
 
-function parse_all_different(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    (t.p != term_id(g, TERM_RDF_TYPE) || 
-     t.o != term_id(g, TERM_OWL_ALL_DIFFERENT)) && return
+# _:x rdf:type owl:AllDifferent .
+# _:x owl:members T(SEQ a1 ... an) .
+function _parse_all_different!(g, decls, exprs, axioms, t)
+    (t.predicate == rdf.type && t.object == owl.AllDifferent) || return
 
-    nodes = filter(x -> t.s == x.s, g.triples)
-    for n in nodes
-        if t.s == n.s && is_b_node(g, n.s) && is_b_node(g, n.o)
-            chain_ids = Vector{UInt64}()
-            parse_chain_list!(g, n.o, chain_ids)
-            a_n = Vector{Individual}()
-            for id in chain_ids
-                push!(a_n, gen_individual(g, id))
-            end
-            push!(axioms, DifferentIndividuals(a_n = a_n))
-        end
+    members = collect(match(g; subject = t.subject, predicate = owl.members))
+    if isempty(members)
+        members = collect(match(g; subject = t.subject, predicate = owl.distinctMembers))
     end
-end
-
-function parse_class_assertion(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    t.p != term_id(g, TERM_RDF_TYPE) && return
-    sub = get(exprs, t.o, get(decls, t.o, nothing))
-    (sub == nothing || !(sub isa CExpression)) && return
-
-    a = gen_individual(g, t.s)
-    push!(axioms, ClassAssertion(ce = sub, a = a))
-end
-
-function parse_object_property_assertion(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    sub = get(exprs, t.p, get(decls, t.p, nothing))
-    (sub == nothing || !(sub isa OPExpression)) && return
-
-    a1 = gen_individual(g, t.s)
-    a2 = gen_individual(g, t.o)
-    push!(axioms, ObjectPropertyAssertion(ope = sub, a1 = a1, a2 = a2))
-end
-
-function parse_data_property_assertion(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    sub = get(exprs, t.p, get(decls, t.p, nothing))
-    (sub == nothing || !(sub isa DPExpression)) && return
-
-    a = gen_individual(g, t.s)
-    lt = Literal(g.names[t.o])
-    push!(axioms, DataPropertyAssertion(dpe = sub, a = a, lt = lt))
-end
-
-function parse_negative_property_assertion(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    (t.o != term_id(g, TERM_OWL_NEGATIVE_PROPERTY_ASSERTION) || t.p != term_id(g, TERM_RDF_TYPE) || !is_b_node(g, t.s)) && return
-
-    nodes = filter(x -> t.s == x.s, g.triples)
-    src = nothing
-    target_individual = nothing
-    target_value = nothing
-    prop = nothing
-    for n in nodes
-        if n.p == term_id(g, TERM_OWL_SOURCE_INDIVIDUAL)
-            src = gen_individual(n.o)
-        elseif n.p == term_id(g, TERM_OWL_TARGET_INDIVIDUAL)
-            target_individual = gen_individual(n.o)
-        elseif n.p == term_id(g, TERM_OWL_TARGET_VALUE)
-            target_value = Literal(g.names[n.o])
-        elseif n.p == term_id(g, TERM_OWL_ASSERTION_PROPERTY)
-            prop = get(decls, n.o, get(expr, n.o, nothing))
-        end
+    if isempty(members)
+        throw(FormatError("$t $members is missing"))
     end
-
-    if prop isa OPExpression && src != nothing && target_individual != nothing
-        push!(axioms, NegativeObjectPropertyAssertion(ope = prop, a1 = src, a2 = target_individual))
-    elseif prop isa DPExpression  src != nothing && target_value != nothing
-        push!(axioms, NegativeDataPropertyAssertion(dpe = prop, a1 = src, lt = target_value))
+    members = first(members)
+    a_n = Individual[]
+    if members.object isa BlankNode
+        terms = RDFTerm[]
+        parse_chain_list!(g, members.object, terms)
+        for term in terms
+            a = get(decls, term, Individual(term))
+            push!(a_n, a)
+        end
     else
-        @warn "unkown axiom ce1:$ce1 ce2:$ce2 t:$(string_triple(g, t))"
+        throw(FormatError("$t owl:members $members"))
+    end
+    if isempty(a_n)
+        throw(FormatError("$t a_n is empty"))
+    end
+    push!(axioms, DifferentIndividuals(a_n = a_n))
+end
+
+# T(a) rdf:type T(CE) .
+function _parse_class_assertion!(g, decls, exprs, axioms, t)
+    t.predicate == rdf.type || return
+
+    sub = get(decls, t.subject, nothing)
+    obj = get(exprs, t.object, get(decls, t.object, nothing))
+    if sub isa Individual
+        # && obj isa CExpression
+        obj = Class(t.object)
+        push!(axioms, ClassAssertion(ce = obj, a = sub))
     end
 end
 
-function parse_deprecated_class(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    (t.o != term_id(g, TERM_OWL_DEPRECATED_CLASS) ||
-     t.p != term_id(g, TERM_RDF_TYPE)) && return
+# T(a1) T(OP) T(a2) .
+function _parse_object_property_assertion!(g, decls, exprs, axioms, t)
+    ope = get(exprs, t.predicate, get(decls, t.predicate, nothing))
+    if ope isa OPExpression
+        a1 = get(decls, t.subject, Individual(t.subject))
+        a2 = get(decls, t.object, Individual(t.object))
+        push!(axioms, ObjectPropertyAssertion(ope = ope, a1 = a1, a2 = a2))
+    end
+end
 
-    ap = AnnotationProperty(TERM_OWL_DEPRECATED)
-    as = g.names[t.s]
-    av = "\"true\"^^$TERM_XSD_BOOLEAN"
+# T(a) T(DPE) T(lt) .
+function _parse_data_property_assertion!(g, decls, exprs, axioms, t)
+    dpe = get(exprs, t.predicate, get(decls, t.predicate, nothing))
+    if dpe isa DPExpression
+        a1 = get(decls, t.subject, Individual(t.subject))
+        lt = get(decls, t.object, Literal(t.object))
+        push!(axioms, DataPropertyAssertion(dpe = dpe, a = a, lt = lt))
+    end
+end
+
+# NegativeObjectPropertyAssertion( OPE a1 a2 )
+# _:x rdf:type owl:NegativePropertyAssertion .
+# _:x owl:sourceIndividual T(a1) .
+# _:x owl:assertionProperty T(OPE) .
+# _:x owl:targetIndividual T(a2) .
+#
+# NegativeDataPropertyAssertion( DPE a lt )
+# _:x rdf:type owl:NegativePropertyAssertion .
+# _:x owl:sourceIndividual T(a) .
+# _:x owl:assertionProperty T(DPE) .
+# _:x owl:targetValue T(lt) .
+function _parse_negative_property_assertion!(g, decls, exprs, axioms, t)
+    (t.predicate == rdf.type && t.object == owl.NegativePropertyAssertion) || return
+
+    prop = match(g; subject = t.subject, predicate = owl.assertionProperty)
+    isempty(prop) && throw(FormatError("$t"))
+    prop = first(prop)
+    prop = get(exprs, prop.object, get(decls, prop.object, nothing))
+    if prop isa OPExpression
+        source = match(g; subject = t.subject, predicate = owl.sourceIndividual)
+        isempty(source) && throw(FormatError("$t $prop owl:sourceIndividual is missing"))
+        source = first(source)
+        a1 = get(decls, source.object, Individual(source.object))
+
+        target = match(g; subject = t.subject, predicate = owl.targetIndividual)
+        isempty(target) && throw(FormatError("$t $prop owl:targetIndividual is missing"))
+        target = first(target)
+        a2 = get(decls, target.object, Individual(target.object))
+        push!(axioms, NegativeObjectPropertyAssertion(ope = prop, a1 = a1, a2 = a2))
+
+    elseif prop isa DPExpression
+        source = match(g; subject = t.subject, predicate = owl.sourceIndividual)
+        isempty(source) && throw(FormatError("$t $prop owl:sourceIndividual is missing"))
+        source = first(source)
+        a1 = get(decls, source.object, Individual(source.object))
+
+        target = match(g; subject = t.subject, predicate = owl.targetValue)
+        isempty(target) && throw(FormatError("$t $prop owl:targetValue is missing"))
+        target = first(target)
+        target_value = string(target.object)
+        push!(axioms, NegativeDataPropertyAssertion(dpe = prop, a1 = a1, lt = target_value))
+    else
+        throw(FormatError("$t $prop"))
+    end
+end
+
+# *:x rdf:type owl:DeprecatedClass .
+function _parse_deprecated_class!(g, decls, exprs, axioms, t)
+    (t.predicate == rdf.type && t.object == owl.DeprecatedClass) || return
+
+    ap = AnnotationProperty(owl.deprecated)
+    as = string(t.subject)
+    av = "\"true\"^^$(string(xsd.boolean))"
     push!(axioms, AnnotationAssertion(ap = ap, as = as, av = av))
 end
 
-function parse_deprecated_property(g::Graph, decls::Dict{UInt64, Any}, exprs::Dict{UInt64, Any}, axioms::Vector{Axiom}, t::TripleID)
-    (t.o != term_id(g, TERM_OWL_DEPRECATED_PROPERTY) ||
-     t.p != term_id(g, TERM_RDF_TYPE)) && return
+# *:x rdf:type owl:DeprecatedProperty .
+function _parse_deprecated_property!(g, decls, exprs, axioms, t)
+    (t.predicate == rdf.type && t.object == owl.DeprecatedProperty) || return
 
-    ap = AnnotationProperty(TERM_OWL_DEPRECATED)
-    as = g.names[t.s]
-    av = "\"true\"^^$TERM_XSD_BOOLEAN"
+    ap = AnnotationProperty(owl.deprecated)
+    as = string(t.subject)
+    av = "\"true\"^^$(xsd.boolean)"
     push!(axioms, AnnotationAssertion(ap = ap, as = as, av = av))
 end
+

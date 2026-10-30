@@ -1,10 +1,14 @@
 module OWL2
 
+using RDF
 
-include("terms.jl")
+const owl = Namespace("http://www.w3.org/2002/07/owl#")
 
 include("axiom.jl")
 include("graph.jl")
+include("errors.jl")
+
+include("normaliser_graph.jl")
 
 include("parser_helper.jl")
 include("parser_decl.jl")
@@ -15,28 +19,17 @@ include("normaliser_axiom.jl")
 
 include("ntriple_writer.jl")
 
-function load_owl(filepath)
-    graph = Graph()
-    add_triples!(graph, filepath)
-    return compose!(graph)
+function load_owl(filepath; mimetype::String = "application/rdf+xml")
+    return _parse_owl!(filepath, mimetype)
 end
 
-function to_triples(axioms::Vector{Axiom})
-    tps = Tuple[]
-    io = stdout
+function write_owl(axioms, filepath; type::Symbol = :nt)
+    g = Graph()
     for a in axioms
-        add_triple!(tps, a)
+        add_triple!(g, a)
     end
-    unique!(tps)
-    return tps
-end
-
-function write_owl_nt(axioms, filepath)
-    tps = to_triples(axioms)
     open(filepath, "w") do io
-        for t in tps
-            println(io, "$(t[1]) $(t[2]) $(t[3]) .")
-        end
+        write(io, type, g)
     end
 end
 

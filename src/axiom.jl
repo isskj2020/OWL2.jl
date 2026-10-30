@@ -1,3 +1,5 @@
+using RDF
+
 abstract type Axiom end
 abstract type CExpression end
 abstract type OPExpression end
@@ -13,43 +15,31 @@ abstract type AnnotationAxiom <: Axiom end
 
 
 @kwdef struct Class <: CExpression
-    x::String
-end
-
-@kwdef struct ClassNodeID <: CExpression
-    x::String
+    x::RDFTerm
 end
 
 @kwdef struct Literal
-    x::String
+    x::RDFTerm
 end
 
 @kwdef struct DataType <: DataRange
-    x::String
+    x::RDFTerm
 end
 
-@kwdef struct DataNodeID <: DataRange
-    x::String
-end
-
-@kwdef struct NamedIndividual <: Individual
-    x::String
-end
-
-@kwdef struct AnonymousIndividual <: Individual
-    x::String
+@kwdef struct Individual
+    x::RDFTerm
 end
 
 @kwdef struct AnnotationProperty
-    x::String
+    x::RDFTerm
 end
 
 @kwdef struct DataProperty <: DPExpression
-    x::String
+    x::RDFTerm
 end
 
 @kwdef struct ObjectProperty <: OPExpression
-    x::String
+    x::RDFTerm
 end
 
 @kwdef mutable struct ObjectPropertyChain <: OPExpression
@@ -164,7 +154,7 @@ end
 
 @kwdef mutable struct DataTypeRestriction <: DataRange
     dt::DataType
-    f_n::Vector{String}
+    f_n::Vector{RDFTerm}
     lt_n::Vector{Literal}
 end
 

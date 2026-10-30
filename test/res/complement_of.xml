@@ -3,6 +3,7 @@
     xml:base="http://example.com/ontology#"
     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
     xmlns:owl="http://www.w3.org/2002/07/owl#">
 
   <rdf:Description rdf:about="#NonHuman">
@@ -25,7 +26,7 @@
   <rdf:Description rdf:about="#NonInteger">
     <rdf:type rdf:resource="http://www.w3.org/2000/01/rdf-schema#Datatype"/>
     <owl:datatypeComplementOf
-        rdf:resource="http://www.w3.org/2001/XMLSchema#integer"/>
+        rdf:resource="xsd:integer"/>
   </rdf:Description>
 
   <rdf:Description rdf:about="#NonRedOrGreen">
@@ -33,12 +34,8 @@
     <owl:datatypeComplementOf>
       <rdfs:Datatype>
         <owl:oneOf rdf:parseType="Collection">
-          <rdf:Description>
-            <rdf:value>red</rdf:value>
-          </rdf:Description>
-          <rdf:Description>
-            <rdf:value>green</rdf:value>
-          </rdf:Description>
+          <rdf:Description rdf:value="red"/>
+          <rdf:Description rdf:value="green"/>
         </owl:oneOf>
       </rdfs:Datatype>
     </owl:datatypeComplementOf>

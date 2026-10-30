@@ -4,8 +4,7 @@ Simple OWL2 type parser for Julia.
 
 ## DependsOn
 
-- [PythonCall](https://github.com/JuliaPy/PythonCall.jl)
-- [rdflib](https://github.com/RDFLib/rdflib)
+- [RDF.jl](https://github.com/mthelm85/RDF.jl)
 
 ## How to
 ```julia
@@ -17,8 +16,7 @@ for axiom in axioms
     @info axiom
 end
 
-# write it to N-triples.
-write_owl_nt(axioms, "./out.ttl")
+write_owl(axioms, "./out.ttl")
 
 axioms = OWL2.load_owl("./out.ttl")
 ```
@@ -46,7 +44,7 @@ axioms = OWL2.load_owl("./out.ttl")
 | &check; | -       | DataUnionOf( DR1 ... DRn ) |
 | &check; | -       | DataComplementOf( DR ) |
 | &check; | -       | DataOneOf( lt1 ... ltn ) |
-| &check; | &check; | DatatypeRestriction( DT  F1 lt1   ... ) |
+| &check; | -       | DatatypeRestriction( DT  F1 lt1   ... ) |
 | &check; | -       | ObjectIntersectionOf( CE1 ... CEn ) |
 | &check; | -       | ObjectUnionOf( CE1 ... CEn ) |
 | &check; | -       | ObjectComplementOf( CE ) |

@@ -1,0 +1,35 @@
+<!DOCTYPE rdf:RDF [
+    <!ENTITY owl "http://www.w3.org/2002/07/owl#" >
+    <!ENTITY xsd "http://www.w3.org/2001/XMLSchema#" >
+    <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#" >
+    <!ENTITY rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#" >
+]>
+<rdf:RDF xmlns="https://raw.githubusercontent.com/owlcs/pizza-ontology/refs/heads/master/pizza.owl#"
+     xml:base="https://raw.githubusercontent.com/owlcs/pizza-ontology/refs/heads/master/pizza.owl"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:owl="http://www.w3.org/2002/07/owl#">
+
+    <owl:Class rdf:about="#Country">
+        <rdfs:label xml:lang="pt">Pais</rdfs:label>
+        <rdfs:comment xml:lang="en"
+            >A class that is equivalent to the set of individuals that are described in the enumeration - ie Countries can only be either America, England, France, Germany or Italy and nothing else. Note that these individuals have been asserted to be allDifferent from each other.</rdfs:comment>
+        <owl:equivalentClass>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <owl:Class>
+                        <owl:oneOf rdf:parseType="Collection">
+                            <owl:Thing rdf:about="#America"/>
+                            <owl:Thing rdf:about="#Italy"/>
+                            <owl:Thing rdf:about="#Germany"/>
+                            <owl:Thing rdf:about="#France"/>
+                            <owl:Thing rdf:about="#England"/>
+                        </owl:oneOf>
+                    </owl:Class>
+                    <owl:Class rdf:about="#DomainConcept"/>
+                </owl:intersectionOf>
+            </owl:Class>
+        </owl:equivalentClass>
+    </owl:Class>
+</rdf:RDF>

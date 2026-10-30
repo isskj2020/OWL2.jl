@@ -4,13 +4,16 @@ version = "0.1.2"
 authors = ["Issei.K <kaji.issei2020@gmail.com>"]
 
 [deps]
-CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
-PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
+EzXML = "8f5d6c58-4d21-5cfd-889c-e3ad7ee6a615"
+RDF = "3fbc022c-18f7-42fc-beaf-ca56153ab0b3"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
+[sources]
+RDF = {rev = "main", url = "https://github.com/mthelm85/RDF.jl.git"}
+
 [compat]
-CondaPkg = "0.2.36"
-PythonCall = "0.9.36"
+EzXML = "1.2.3"
+RDF = "0.1.0"
 Random = "1.11.0"
 Test = "1.11.0"
 
