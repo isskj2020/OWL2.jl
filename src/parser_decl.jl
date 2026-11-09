@@ -23,7 +23,11 @@ function _parse_declarations!(g, decls, t)
     if t.subject isa IRI && t.object == owl.AnnotationProperty && !haskey(decls, t.subject)
         decls[t.subject] = AnnotationProperty(t.subject)
     end
-    if t.subject isa IRI && t.predicate == rdf.type && t.object isa IRI && !haskey(decls, t.subject)
+    if t.subject isa IRI && t.predicate == rdf.type &&
+        !startswith(string(t.object), string(owl)) &&
+        !startswith(string(t.object), string(rdfs)) &&
+        !startswith(string(t.object), string(rdf)) &&
+        !haskey(decls, t.subject)
         decls[t.subject] = Individual(t.subject)
     end
 end

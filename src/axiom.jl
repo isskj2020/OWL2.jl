@@ -13,7 +13,6 @@ abstract type DataPropertyAxiom <: Axiom end
 abstract type Assertion <: Axiom end
 abstract type AnnotationAxiom <: Axiom end
 
-
 @kwdef struct Class <: CExpression
     x::RDFTerm
 end
@@ -41,6 +40,22 @@ end
 @kwdef struct ObjectProperty <: OPExpression
     x::RDFTerm
 end
+
+@kwdef mutable struct Annotation
+    ann_n::Vector{Annotation} = []
+    ap::AnnotationProperty
+    av::RDFTerm
+end
+
+@kwdef mutable struct Ontology
+    g::Graph
+    iri::Union{RDFTerm, Nothing} = nothing
+    version::Union{RDFTerm, Nothing} = nothing
+    imports::Vector{RDFTerm} = []
+    annotations::Vector{Annotation} = []
+    axioms::Vector{Axiom} = []
+end
+
 
 @kwdef mutable struct ObjectPropertyChain <: OPExpression
     ope_n::Vector{OPExpression}
@@ -156,12 +171,6 @@ end
     dt::DataType
     f_n::Vector{RDFTerm}
     lt_n::Vector{Literal}
-end
-
-@kwdef mutable struct Annotation
-    ann_n::Vector{Annotation} = []
-    ap::AnnotationProperty
-    av::String
 end
 
 @kwdef mutable struct Declaration <: Axiom
@@ -340,21 +349,21 @@ end
     ann_n::Vector{Annotation} = []
     dpe::DPExpression
     a::Individual
-    lt::String
+    lt::Literal
 end
 
 @kwdef mutable struct NegativeDataPropertyAssertion <: Assertion
     ann_n::Vector{Annotation} = []
     dpe::DPExpression
     a::Individual
-    lt::String
+    lt::Literal
 end
 
 @kwdef mutable struct AnnotationAssertion <: AnnotationAxiom
     ann_n::Vector{Annotation} = []
     ap::AnnotationProperty
-    as::String
-    av::String
+    as::RDFTerm
+    av::RDFTerm
 end
 
 @kwdef struct SubAnnotationPropertyOf <: AnnotationAxiom
@@ -367,12 +376,12 @@ end
 @kwdef struct AnnotationPropertyDomain <: AnnotationAxiom
     ann_n::Vector{Annotation} = []
     ap::AnnotationProperty
-    u::String
+    u::RDFTerm
 end
 
 @kwdef struct AnnotationPropertyRange <: AnnotationAxiom
     ann_n::Vector{Annotation} = []
     ap::AnnotationProperty
-    u::String
+    u::RDFTerm
 end
 

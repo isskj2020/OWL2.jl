@@ -11,8 +11,10 @@ Simple OWL2 type parser for Julia.
 using OWL2
 
 # load RDF/XML
-axioms = OWL2.load_owl("./sample.xml")
-for axiom in axioms
+ontology = OWL2.load_owl("./sample.xml")
+@info "ontology IRI" ontology.iri
+@info "ontology version" ontology.version
+for axiom in ontology.axioms
     @info axiom
 end
 

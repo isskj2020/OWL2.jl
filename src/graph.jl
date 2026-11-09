@@ -6,11 +6,14 @@ function _parse_owl!(filepath, mimetype)
     exprs = Dict{RDFTerm, Any}()
     axioms = Vector{Axiom}()
 
-    g = nothing
-    open(realpath(filepath)) do io
+    decls[owl.Thing] = Class(owl.Thing)
+
+    return open(realpath(filepath)) do io
         g = read(io, MIME(mimetype), Graph)
 
         normalise_graph!(g)
+
+        ontology = _parse_ontology!(g)
 
         for t in match(g)
             _parse_declarations!(g, decls, t)
@@ -26,7 +29,10 @@ function _parse_owl!(filepath, mimetype)
         end
 
         _normalise_axioms!(g, decls, exprs, axioms)
+
+        ontology.g = g
+        append!(ontology.axioms, axioms)
+        ontology
     end
-    return axioms
 end
 
