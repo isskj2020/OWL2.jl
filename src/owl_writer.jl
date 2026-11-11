@@ -14,7 +14,7 @@ function _write_rdf_graph!(ontology, g)
         end
     end
     for a in ontology.axioms
-        add_triple!(g, a)
+        _add_triple!(g, a)
     end
     return g
 end

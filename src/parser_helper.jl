@@ -1,6 +1,6 @@
 using RDF
 
-function parse_chain_list!(g, term, out)
+function _parse_chain_list!(g, term, out)
     chains = collect(match(g; subject = term))
 
     first_nodes = match(g; subject = term, predicate = rdf.first)
@@ -12,7 +12,7 @@ function parse_chain_list!(g, term, out)
     rest_node = first(rest_nodes)
 
     if rest_node.object isa BlankNode
-        parse_chain_list!(g, rest_node.object, out)
+        _parse_chain_list!(g, rest_node.object, out)
     end
 end
 

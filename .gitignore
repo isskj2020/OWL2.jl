@@ -27,6 +27,4 @@ Manifest*.toml
 LocalPreferences.toml
 JuliaLocalPreferences.toml
 
-.CondaPkg
-
-test/test_output.ttl
+test/build/

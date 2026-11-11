@@ -1,597 +1,628 @@
 using Random, RDF
 
-add_triple!(g, axiom::Axiom) = add_ntps!(g, axiom, nothing)
+_id_rotation = 1
+_add_triple!(g, axiom::Axiom) = _add_triple!(g, axiom, nothing, Annotation[])
 
-add_ntps!(g, v::Vector, parent) = begin
+
+_add_triple!(g, t::Triple, annotations) = begin
+    if isempty(annotations)
+        push!(g, t)
+    else
+        for ann in annotations
+            annotate!(g, t, ann.ap, ann.av)
+        end
+    end
+end
+
+_add_triple!(g, v::Vector, parent, annotations) = begin
     id = parent
     for x in v
         res = x
         while !(res isa RDFTerm)
-            res = add_ntps!(g, res, id)
+            res = _add_triple!(g, res, id, annotations)
         end
-        push!(g, Triple(id, rdf.first, res))
+        _add_triple!(g, Triple(id, rdf.first, res), annotations)
         newid = v[end] == x ? rdf.nil : blank_node_id()
-        push!(g, Triple(id, rdf.rest, newid))
+        _add_triple!(g, Triple(id, rdf.rest, newid), annotations)
         id = newid
     end
     return id
 end
 
-add_ntps!(g, x::Literal, parent) = x.x
+_add_triples!(g, x, parent, annotations) = begin
+    (x == nothing || x isa RDFTerm) && return x
+    n = _add_triple!(g, x, parent, annotations)
+    return _add_triples!(g, n, parent, annotations)
+end
 
-add_ntps!(g, x::Class, parent) = begin
-    push!(g, Triple(x.x, rdf.type, owl.Class))
+_add_triple!(g, x::Class, parent, annotations) = begin
+    _add_triple!(g, Triple(x.x, rdf.type, owl.Class), annotations)
     return x.x
 end
 
-add_ntps!(g, x::DataType, parent) = begin
-    push!(g, Triple(x.x, rdf.type, rdfs.Datatype))
+_add_triple!(g, x::Literal, parent, annotations) = x.x
+
+_add_triple!(g, x::DataType, parent, annotations) = begin
+    _add_triple!(g, Triple(x.x, rdf.type, rdfs.Datatype), annotations)
     return x.x
 end
 
-add_ntps!(g, x::Individual, parent) = begin
+_add_triple!(g, x::Individual, parent, annotations) = begin
     if !(x.x isa BlankNode)
-        push!(g, Triple(x.x, rdf.type, owl.NamedIndividual))
+        _add_triple!(g, Triple(x.x, rdf.type, owl.NamedIndividual), annotations)
     end
     return x.x
 end
 
-add_ntps!(g, x::AnnotationProperty, parent) = begin
-    push!(g, Triple(x.x, rdf.type, owl.AnnotationProperty))
+_add_triple!(g, x::AnnotationProperty, parent, annotations) = begin
+    _add_triple!(g, Triple(x.x, rdf.type, owl.AnnotationProperty), annotations)
     return x.x
 end
 
-add_ntps!(g, x::DataProperty, parent) = begin
-    push!(g, Triple(x.x, rdf.type, owl.DatatypeProperty))
+_add_triple!(g, x::DataProperty, parent, annotations) = begin
+    _add_triple!(g, Triple(x.x, rdf.type, owl.DatatypeProperty), annotations)
     return x.x
 end
 
-add_ntps!(g, x::ObjectProperty, parent) = begin
-    push!(g, Triple(x.x, rdf.type, owl.ObjectProperty))
+_add_triple!(g, x::ObjectProperty, parent, annotations) = begin
+    _add_triple!(g, Triple(x.x, rdf.type, owl.ObjectProperty), annotations)
     return x.x
 end
 
-add_ntps!(g, x::ObjectPropertyChain, parent) = begin
-    return add_ntps!(g, x.ope_n, parent)
+_add_triple!(g, x::ObjectPropertyChain, parent, annotations) = begin
+    return _add_triples!(g, x.ope_n, parent, annotations)
 end
 
-add_ntps!(g, x::ObjectInverseOf, parent) = begin
-    push!(g, Triple(parent, owl.inverseOf, x.ope))
+_add_triple!(g, x::ObjectInverseOf, parent, annotations) = begin
+    if parent == nothing
+        parent = blank_node_id()
+    end
+    o = _add_triples!(g, x.ope, parent, annotations)
+    _add_triple!(g, Triple(parent, owl.inverseOf, o), annotations)
     return x.ope
 end
 
-add_ntps!(g, x::ObjectIntersectionOf, parent) = begin
+_add_triple!(g, x::ObjectIntersectionOf, parent, annotations) = begin
     o = blank_node_id()
     if parent == nothing
         parent = blank_node_id()
     end
-    push!(g, Triple(parent, owl.intersectionOf, o))
-    return add_ntps!(g, x.ce_n, o)
+    _add_triple!(g, Triple(parent, owl.intersectionOf, o), annotations)
+    return _add_triples!(g, x.ce_n, o, annotations)
 end
 
-add_ntps!(g, x::ObjectUnionOf, parent) = begin
+_add_triple!(g, x::ObjectUnionOf, parent, annotations) = begin
     o = blank_node_id()
     if parent == nothing
         parent = blank_node_id()
     end
-    push!(g, Triple(parent, owl.unionOf, o))
-    return add_ntps!(g, x.ce_n, o)
+    _add_triple!(g, Triple(parent, owl.unionOf, o), annotations)
+    return _add_triples!(g, x.ce_n, o, annotations)
 end
 
-add_ntps!(g, x::ObjectComplementOf, parent) = begin
-    o = add_ntps!(g, x.ce, parent)
-    push!(g, Triple(parent, owl.complementOf, o))
+_add_triple!(g, x::ObjectComplementOf, parent, annotations) = begin
+    o = _add_triple!(g, x.ce, parent, annotations)
+    _add_triple!(g, Triple(parent, owl.complementOf, o), annotations)
     return x.ce
 end
 
-add_ntps!(g, x::ObjectOneOf, parent) = begin
+_add_triple!(g, x::ObjectOneOf, parent, annotations) = begin
     o = blank_node_id()
-    push!(g, Triple(parent, owl.oneOf, o))
-    return add_ntps!(g, x.a_n, o)
+    _add_triple!(g, Triple(parent, owl.oneOf, o), annotations)
+    return _add_triples!(g, x.a_n, o, annotations)
 end
 
-add_ntps!(g, x::ObjectSomeValuesFrom, parent) = begin
+_add_triple!(g, x::ObjectSomeValuesFrom, parent, annotations) = begin
     id = blank_node_id()
-    push!(g, Triple(id, rdf.type, owl.Restriction))
-    o = add_ntps!(g, x.ope, id)
-    push!(g, Triple(id, owl.onProperty, o))
-    o = add_ntps!(g, x.ce, id)
-    push!(g, Triple(id, owl.someValuesFrom, o))
+    _add_triple!(g, Triple(id, rdf.type, owl.Restriction), annotations)
+    o = _add_triples!(g, x.ope, id, annotations)
+    _add_triple!(g, Triple(id, owl.onProperty, o), annotations)
+    o = _add_triples!(g, x.ce, id, annotations)
+    _add_triple!(g, Triple(id, owl.someValuesFrom, o), annotations)
     return id
 end
 
-add_ntps!(g, x::ObjectAllValuesFrom, parent) = begin
+_add_triple!(g, x::ObjectAllValuesFrom, parent, annotations) = begin
     id = blank_node_id()
-    push!(g, Triple(id, rdf.type, owl.Restriction))
-    o = add_ntps!(g, x.ope, id)
-    push!(g, Triple(id, owl.onProperty, o))
-    o = add_ntps!(g, x.ce, id)
-    push!(g, Triple(id, owl.allValuesFrom, o))
+    _add_triple!(g, Triple(id, rdf.type, owl.Restriction), annotations)
+    o = _add_triples!(g, x.ope, id)
+    _add_triple!(g, Triple(id, owl.onProperty, o), annotations)
+    o = _add_triples!(g, x.ce, id)
+    _add_triple!(g, Triple(id, owl.allValuesFrom, o), annotations)
     return id
 end
 
-add_ntps!(g, x::ObjectHasValue, parent) = begin
+_add_triple!(g, x::ObjectHasValue, parent, annotations) = begin
     id = blank_node_id()
-    push!(g, Triple(id, rdf.type, owl.Restriction))
-    o = add_ntps!(g, x.ope, id)
-    push!(g, Triple(id, owl.onProperty, o))
-    o = add_ntps!(g, x.a, id)
-    push!(g, Triple(id, owl.hasValue, o))
+    _add_triple!(g, Triple(id, rdf.type, owl.Restriction), annotations)
+    o = _add_triples!(g, x.ope, id)
+    _add_triple!(g, Triple(id, owl.onProperty, o), annotations)
+    o = _add_triples!(g, x.a, id)
+    _add_triple!(g, Triple(id, owl.hasValue, o), annotations)
     return id
 end
 
-add_ntps!(g, x::ObjectHasSelf, parent) = begin
+_add_triple!(g, x::ObjectHasSelf, parent, annotations) = begin
     id = blank_node_id()
-    push!(g, Triple(id, rdf.type, owl.Restriction))
-    o = add_ntps!(g, x.ope, id)
-    push!(g, Triple(id, owl.onProperty, o))
+    _add_triple!(g, Triple(id, rdf.type, owl.Restriction), annotations)
+    o = _add_triples!(g, x.ope, id)
+    _add_triple!(g, Triple(id, owl.onProperty, o), annotations)
     o = RDF.Literal(true)
-    push!(g, Triple(id, owl.hasSelf, o))
+    _add_triple!(g, Triple(id, owl.hasSelf, o), annotations)
     return id
 end
 
-add_ntps!(g, x::ObjectMinCardinality, parent) = begin
+_add_triple!(g, x::ObjectMinCardinality, parent, annotations) = begin
     id = blank_node_id()
-    push!(g, Triple(id, rdf.type, owl.Restriction))
-    o = add_ntps!(g, x.ope, id)
-    push!(g, Triple(id, owl.onProperty, o))
+    _add_triple!(g, Triple(id, rdf.type, owl.Restriction), annotations)
+    o = _add_triples!(g, x.ope, id)
+    _add_triple!(g, Triple(id, owl.onProperty, o), annotations)
     if x.ce == nothing
         o = RDF.Literal(x.n)
-        push!(g, Triple(id, owl.minCardinality, o))
+        _add_triple!(g, Triple(id, owl.minCardinality, o), annotations)
     else
         o = RDF.Literal(x.n)
-        push!(g, Triple(id, owl.minQualifiedCardinality, o))
-        o = add_ntps!(g, x.ce, id)
-        push!(g, Triple(id, owl.onClass, o))
+        _add_triple!(g, Triple(id, owl.minQualifiedCardinality, o), annotations)
+        o = _add_triples!(g, x.ce, id, annotations)
+        _add_triple!(g, Triple(id, owl.onClass, o), annotations)
     end
     return id
 end
 
-add_ntps!(g, x::ObjectMaxCardinality, parent) = begin
+_add_triple!(g, x::ObjectMaxCardinality, parent, annotations) = begin
     id = blank_node_id()
-    push!(g, Triple(id, rdf.type, owl.Restriction))
-    o = add_ntps!(g, x.ope, id)
-    push!(g, Triple(id, owl.onProperty, o))
+    _add_triple!(g, Triple(id, rdf.type, owl.Restriction), annotations)
+    o = _add_triples!(g, x.ope, id, annotations)
+    _add_triple!(g, Triple(id, owl.onProperty, o), annotations)
     if x.ce == nothing
         o = RDF.Literal(x.n)
-        push!(g, Triple(id, owl.maxCardinality, o))
+        _add_triple!(g, Triple(id, owl.maxCardinality, o), annotations)
     else
         o = RDF.Literal(x.n)
-        push!(g, Triple(id, owl.maxQualifiedCardinality, o))
-        o = add_ntps!(g, x.ce, id)
-        push!(g, Triple(id, owl.onClass, o))
+        _add_triple!(g, Triple(id, owl.maxQualifiedCardinality, o), annotations)
+        o = _add_triples!(g, x.ce, id, annotations)
+        _add_triple!(g, Triple(id, owl.onClass, o), annotations)
     end
     return id
 end
 
-add_ntps!(g, x::ObjectExactCardinality, parent) = begin
+_add_triple!(g, x::ObjectExactCardinality, parent, annotations) = begin
     id = blank_node_id()
-    push!(g, Triple(id, rdf.type, owl.Restriction))
-    o = add_ntps!(g, x.ope, id)
-    push!(g, Triple(id, owl.onProperty, o))
+    _add_triple!(g, Triple(id, rdf.type, owl.Restriction), annotations)
+    o = _add_triples!(g, x.ope, id, annotations)
+    _add_triple!(g, Triple(id, owl.onProperty, o), annotations)
     if x.ce == nothing
         o = RDF.Literal(x.n)
-        push!(g, Triple(id, owl.cardinality, o))
+        _add_triple!(g, Triple(id, owl.cardinality, o), annotations)
     else
         o = RDF.Literal(x.n)
-        push!(g, Triple(id, owl.qualifiedCardinality, o))
-        o = add_ntps!(g, x.ce, id)
-        push!(g, Triple(id, owl.onClass, o))
+        _add_triple!(g, Triple(id, owl.qualifiedCardinality, o), annotations)
+        o = _add_triples!(g, x.ce, id, annotations)
+        _add_triple!(g, Triple(id, owl.onClass, o), annotations)
     end
     return id
 end
 
-add_ntps!(g, x::DataSomeValuesFrom, parent) = begin
+_add_triple!(g, x::DataSomeValuesFrom, parent, annotations) = begin
     id = blank_node_id()
-    push!(g, Triple(id, rdf.type, owl.Restriction))
+    _add_triple!(g, Triple(id, rdf.type, owl.Restriction), annotations)
     if length(x.dpe_n) == 1
-        o = add_ntps!(g, first(x.dpe_n), id)
-        push!(g, Triple(id, owl.onProperty, o))
+        o = _add_triples!(g, first(x.dpe_n), id, annotations)
+        _add_triple!(g, Triple(id, owl.onProperty, o), annotations)
     else
         o = blank_node_id()
-        push!(g, Triple(id, owl.onProperties, o))
-        add_ntps!(g, x.dpe_n, o)
+        _add_triple!(g, Triple(id, owl.onProperties, o), annotations)
+        _add_triples!(g, x.dpe_n, o, annotations)
     end
-    o = add_ntps!(g, x.dr, id)
-    push!(g, Triple(id, owl.someValuesFrom, o))
+    o = _add_triples!(g, x.dr, id)
+    _add_triple!(g, Triple(id, owl.someValuesFrom, o), annotations)
     return id
 end
 
-add_ntps!(g, x::DataAllValuesFrom, parent) = begin
+_add_triple!(g, x::DataAllValuesFrom, parent, annotations) = begin
     id = blank_node_id()
-    push!(g, Triple(id, rdf.type, owl.Restriction))
+    _add_triple!(g, Triple(id, rdf.type, owl.Restriction), annotations)
     if length(x.dpe_n) == 1
-        o = add_ntps!(g, first(x.dpe_n), id)
-        push!(g, Triple(id, owl.onProperty, o))
+        o = _add_triple!(g, first(x.dpe_n), id, annotations)
+        _add_triple!(g, Triple(id, owl.onProperty, o), annotations)
     else
         o = blank_node_id()
-        push!(g, Triple(id, owl.onProperties, o))
-        add_ntps!(g, x.dpe_n, o)
+        _add_triple!(g, Triple(id, owl.onProperties, o), annotations)
+        _add_triples!(g, x.dpe_n, o, annotations)
     end
-    o = add_ntps!(g, x.dr, id)
-    push!(g, Triple(id, owl.allValuesFrom, o))
+    o = _add_triples!(g, x.dr, id)
+    _add_triple!(g, Triple(id, owl.allValuesFrom, o), annotations)
     return id
 end
 
-add_ntps!(g, x::DataHasValue, parent) = begin
+_add_triple!(g, x::DataHasValue, parent, annotations) = begin
     id = blank_node_id()
-    push!(g, Triple(id, rdf.type, owl.Restriction))
-    o = add_ntps!(g, x.dpe, id)
-    value = add_ntps!(g, t.lt, id)
-    push!(g, Triple(id, owl.onProperty, o))
-    push!(g, Triple(id, owl.hasValue, value))
+    _add_triple!(g, Triple(id, rdf.type, owl.Restriction), annotations)
+    o = _add_triples!(g, x.dpe, id, annotations)
+    value = _add_triples!(g, t.lt, id, annotations)
+    _add_triple!(g, Triple(id, owl.onProperty, o), annotations)
+    _add_triple!(g, Triple(id, owl.hasValue, value), annotations)
     return id
 end
 
-add_ntps!(g, x::DataMinCardinality, parent) = begin
+_add_triple!(g, x::DataMinCardinality, parent, annotations) = begin
     id = blank_node_id()
-    push!(g, Triple(id, rdf.type, owl.Restriction))
-    o = add_ntps!(g, x.dpe, id)
-    push!(g, Triple(id, owl.onProperty, o))
+    _add_triple!(g, Triple(id, rdf.type, owl.Restriction), annotations)
+    o = _add_triples!(g, x.dpe, id, annotations)
+    _add_triple!(g, Triple(id, owl.onProperty, o), annotations)
     if x.dr == nothing
         o = RDF.Literal(x.n)
-        push!(g, Triple(id, owl.minCardinality, o))
+        _add_triple!(g, Triple(id, owl.minCardinality, o), annotations)
     else
         o = RDF.Literal(x.n)
-        push!(g, Triple(id, owl.minQualifiedCardinality, o))
-        o = add_ntps!(g, x.dr, id)
-        push!(g, Triple(id, owl.onDataRange, o))
+        _add_triple!(g, Triple(id, owl.minQualifiedCardinality, o), annotations)
+        o = _add_triples!(g, x.dr, id, annotations)
+        _add_triple!(g, Triple(id, owl.onDataRange, o), annotations)
     end
     return id
 end
 
-add_ntps!(g, x::DataMaxCardinality, parent) = begin
+_add_triple!(g, x::DataMaxCardinality, parent, annotations) = begin
     id = blank_node_id()
-    push!(g, Triple(id, rdf.type, owl.Restriction))
-    o = add_ntps!(g, x.dpe, id)
-    push!(g, Triple(id, owl.onProperty, o))
+    _add_triple!(g, Triple(id, rdf.type, owl.Restriction), annotations)
+    o = _add_triples!(g, x.dpe, id, annotations)
+    _add_triple!(g, Triple(id, owl.onProperty, o), annotations)
     if x.dr == nothing
         o = RDF.Literal(x.n)
-        push!(g, Triple(id, owl.maxCardinality, o))
+        _add_triple!(g, Triple(id, owl.maxCardinality, o), annotations)
     else
         o = RDF.Literal(x.n)
-        push!(g, Triple(id, owl.maxQualifiedCardinality, o))
-        o = add_ntps!(g, x.dr, id)
-        push!(g, Triple(id, owl.onDataRange, o))
+        _add_triple!(g, Triple(id, owl.maxQualifiedCardinality, o), annotations)
+        o = _add_triples!(g, x.dr, id, annotations)
+        _add_triple!(g, Triple(id, owl.onDataRange, o), annotations)
     end
     return id
 end
 
-add_ntps!(g, x::DataExactCardinality, parent) = begin
+_add_triple!(g, x::DataExactCardinality, parent, annotations) = begin
     id = blank_node_id()
-    push!(g, Triple(id, rdf.type, owl.Restriction))
-    o = add_ntps!(g, x.dpe, id)
-    push!(g, Triple(id, owl.onProperty, o))
+    _add_triple!(g, Triple(id, rdf.type, owl.Restriction), annotations)
+    o = _add_triples!(g, x.dpe, id, annotations)
+    _add_triple!(g, Triple(id, owl.onProperty, o), annotations)
     if x.dr == nothing
         o = RDF.Literal(x.n)
-        push!(g, Triple(id, owl.cardinality, o))
+        _add_triple!(g, Triple(id, owl.cardinality, o), annotations)
     else
         o = RDF.Literal(x.n)
-        push!(g, Triple(id, owl.qualifiedCardinality, o))
-        o = add_ntps!(g, x.dr, id)
-        push!(g, Triple(id, owl.onDataRange, o))
+        _add_triple!(g, Triple(id, owl.qualifiedCardinality, o), annotations)
+        o = _add_triples!(g, x.dr, id, annotations)
+        _add_triple!(g, Triple(id, owl.onDataRange, o), annotations)
     end
     return id
 end
 
-add_ntps!(g, x::DataIntersectionOf, parent) = begin
+_add_triple!(g, x::DataIntersectionOf, parent, annotations) = begin
     id = blank_node_id()
     if parent == nothing
         parent = blank_node_id()
     end
-    push!(g, Triple(parent, owl.intersectionOf, id))
-    add_ntps!(g, x.dr_n, id)
+    _add_triple!(g, Triple(parent, owl.intersectionOf, id), annotations)
+    _add_triples!(g, x.dr_n, id, annotations)
     return parent
 end
 
-add_ntps!(g, x::DataUnionOf, parent) = begin
+_add_triple!(g, x::DataUnionOf, parent, annotations) = begin
     id = blank_node_id()
     if parent == nothing
         parent = blank_node_id()
     end
-    push!(g, Triple(parent, owl.unionOf, id))
+    _add_triple!(g, Triple(parent, owl.unionOf, id), annotations)
     return parent
 end
 
-add_ntps!(g, x::DataComplementOf, parent) = begin
-    o = add_ntps!(g, x.dr, parent)
-    push!(g, Triple(parent, owl.datatypeComplementOf, o))
+_add_triple!(g, x::DataComplementOf, parent, annotations) = begin
+    o = _add_triples!(g, x.dr, parent, annotations)
+    _add_triple!(g, Triple(parent, owl.datatypeComplementOf, o), annotations)
     return parent
 end
 
-add_ntps!(g, x::DataOneOf, parent) = begin
+_add_triple!(g, x::DataOneOf, parent, annotations) = begin
     o = blank_node_id()
-    push!(g, Triple(parent, owl.oneOf, o))
-    return add_ntps!(g, x.lt_n, o)
+    _add_triple!(g, Triple(parent, owl.oneOf, o), annotations)
+    return _add_triples!(g, x.lt_n, o, annotations)
 end
 
-add_ntps!(g, x::DataTypeRestriction, parent) = begin
+_add_triple!(g, x::DataTypeRestriction, parent, annotations) = begin
     sub = blank_node_id()
-    push!(g, Triple(sub, rdf.type, rdfs.Datatype))
-    o = add_ntps!(g, x.dt, parent)
-    push!(g, Triple(sub, owl.onDatatype, o))
+    _add_triple!(g, Triple(sub, rdf.type, rdfs.Datatype), annotations)
+    o = _add_triples!(g, x.dt, parent, annotations)
+    _add_triple!(g, Triple(sub, owl.onDatatype, o), annotations)
     o = blank_node_id()
-    push!(g, Triple(sub, owl.withRestrictions, o))
+    _add_triple!(g, Triple(sub, owl.withRestrictions, o), annotations)
     ids = [blank_node_id() for i in 1:length(x.f_n)]
-    add_ntps!(g, ids, o)
+    _add_triples!(g, ids, o, annotations)
     for i in eachindex(ids)
-        lt = add_ntps!(g, x.lt_n[i], parent)
-        push!(g, Triple(ids[i], x.f_n[i], lt))
+        lt = _add_triples!(g, x.lt_n[i], parent, annotations)
+        _add_triple!(g, Triple(ids[i], x.f_n[i], lt), annotations)
     end
     return sub
 end
 
-add_ntps!(g, x::Declaration, parent) = add_ntps!(g, x.e, parent)
-
-add_ntps!(g, x::SubClassOf, parent) = begin
-    s = add_ntps!(g, x.ce1, parent)
-    p = rdfs.subClassOf
-    o = add_ntps!(g, x.ce2, parent)
-    push!(g, Triple(s, p, o))
+_add_triple!(g, x::Declaration, parent, annotations) = begin
+    append!(annotations, x.ann_n)
+    _add_triples!(g, x.e, parent, annotations)
     return parent
 end
 
-add_ntps!(g, x::EquivalentClasses, parent) = begin
+_add_triple!(g, x::SubClassOf, parent, annotations) = begin
+    append!(annotations, x.ann_n)
+    s = _add_triples!(g, x.ce1, parent, annotations)
+    p = rdfs.subClassOf
+    o = _add_triples!(g, x.ce2, parent, annotations)
+    _add_triple!(g, Triple(s, p, o), annotations)
+    return parent
+end
+
+
+_add_triple!(g, x::EquivalentClasses, parent, annotations) = begin
+    append!(annotations, x.ann_n)
     for i in eachindex(x.ce_n)
         if i == length(x.ce_n)
             # last
             if i % 2 == 1
-                s = add_ntps!(g, x.ce_n[i-1], parent)
+                s = _add_triples!(g, x.ce_n[i-1], parent, annotations)
                 p = owl.equivalentClass
-                o = add_ntps!(g, x.ce_n[i], parent)
-                push!(g, Triple(s, p, o))
+                o = _add_triples!(g, x.ce_n[i], parent, annotations)
+                _add_triple!(g, Triple(s, p, o), annotations)
             end
         else
-            s = add_ntps!(g, x.ce_n[i], parent)
+            s = _add_triples!(g, x.ce_n[i], parent, annotations)
             p = owl.equivalentClass
-            o = add_ntps!(g, x.ce_n[i+1], parent)
-            push!(g, Triple(s, p, o))
+            o = _add_triples!(g, x.ce_n[i+1], parent, annotations)
+            _add_triple!(g, Triple(s, p, o), annotations)
 
         end
     end
     return parent
 end
 
-add_ntps!(g, x::DisjointClasses, parent) = begin
+_add_triple!(g, x::DisjointClasses, parent, annotations) = begin
+    append!(annotations, x.ann_n)
     if length(x.ce_n) > 2
         id1 = blank_node_id()
         id2 = blank_node_id()
-        push!(g, (id1, rdf.type, owl.allDisjointClasses))
-        push!(g, (id1, owl.members, id2))
-        add_ntps!(g, x.ce_n, id2)
+        _add_triple!(g, Triple(id1, rdf.type, owl.allDisjointClasses), annotations)
+        _add_triple!(g, Triple(id1, owl.members, id2), annotations)
+        _add_triples!(g, x.ce_n, id2, annotations)
     else
-        s = add_ntps!(g, x.ce_n[1], parent)
+        s = _add_triples!(g, x.ce_n[1], parent, annotations)
         p = owl.disjointWith
-        o = add_ntps!(g, x.ce_n[2], parent)
-        push!(g, Triple(s, p, o))
+        o = _add_triples!(g, x.ce_n[2], parent, annotations)
+        _add_triple!(g, Triple(s, p, o), annotations)
     end
     return parent
 end
 
-add_ntps!(g, x::DisjointUnion, parent) = begin
-    s = add_ntps!(g, x.c, parent)
+_add_triple!(g, x::DisjointUnion, parent, annotations) = begin
+    append!(annotations, x.ann_n)
+    s = _add_triples!(g, x.c, parent, annotations)
     p = owl.disjointUnionOf
     o = blank_node_id()
-    push!(g, Triple(s, p, o))
-    add_ntps!(g, x.ce_n, o)
+    _add_triple!(g, Triple(s, p, o), annotations)
+    _add_triples!(g, x.ce_n, o, annotations)
     return parent
 end
 
-add_ntps!(g, x::SubObjectPropertyOf, parent) = begin
+_add_triple!(g, x::SubObjectPropertyOf, parent, annotations) = begin
     if x.ope1 isa OPExpression
-        s = add_ntps!(g, x.ope1, parent)
+        s = _add_triples!(g, x.ope1, parent, annotations)
         p = rdfs.subPropertyOf
-        o = add_ntps!(g, x.ope2, parent)
-        push!(g, Triple(s, p, o))
+        o = _add_triples!(g, x.ope2, parent, annotations)
+        _add_triple!(g, Triple(s, p, o), annotations)
     elseif x.ope1 isa ObjectPropertyChain
         id = blank_node_id()
-        s = add_ntps!(g, x.ope2, parent)
+        s = _add_triples!(g, x.ope2, parent, annotations)
         p = owl.propertyChainAxiom
         o = id
-        push!(g, Triple(s, p, o))
-        add_ntps!(g, x.ope1, o)
+        _add_triple!(g, Triple(s, p, o), annotations)
+        _add_triples!(g, x.ope1, o, annotations)
     end
     return parent
 end
 
-add_ntps!(g, x::EquivalentObjectProperties, parent) = begin
+_add_triple!(g, x::EquivalentObjectProperties, parent, annotations) = begin
     for i in eachindex(x.ope_n)
         if i == length(x.ope_n)
             # last
             if i % 2 == 1
-                s = add_ntps!(g, x.ope_n[i-1], parent)
+                s = _add_triples!(g, x.ope_n[i-1], parent, annotations)
                 p = owl.equivalentProperty
-                o = add_ntps!(g, x.ope_n[i], parent)
-                push!(g, Triple(s, p, o))
+                o = _add_triples!(g, x.ope_n[i], parent, annotations)
+                _add_triple!(g, Triple(s, p, o), annotations)
             end
         else
-            s = add_ntps!(g, x.ope_n[i], parent)
+            s = _add_triples!(g, x.ope_n[i], parent, annotations)
             p = owl.equivalentProperty
-            o = add_ntps!(g, x.ope_n[i+1], parent)
-            push!(g, Triple(s, p, o))
+            o = _add_triples!(g, x.ope_n[i+1], parent, annotations)
+            _add_triple!(g, Triple(s, p, o), annotations)
         end
     end
     return parent
 end
 
-add_ntps!(g, x::DisjointObjectProperties, parent) = begin
+_add_triple!(g, x::DisjointObjectProperties, parent, annotations) = begin
     if length(x.ope_n) > 2
         id1 = blank_node_id()
         id2 = blank_node_id()
-        push!(g, (id1, rdf.type, owl.allDisjointProperties))
-        push!(g, (id1, owl.members, id2))
-        add_ntps!(g, x.ope_n, id2)
+        _add_triple!(g, Triple(id1, rdf.type, owl.allDisjointProperties), annotations)
+        _add_triple!(g, Triple(id1, owl.members, id2), annotations)
+        _add_triples!(g, x.ope_n, id2, annotations)
     else
-        s = add_ntps!(g, x.ope_n[1], parent)
+        s = _add_triples!(g, x.ope_n[1], parent, annotations)
         p = owl.propertyDisjointWith
-        o = add_ntps!(g, x.ope_n[2], parent)
-        push!(g, Triple(s, p, o))
+        o = _add_triples!(g, x.ope_n[2], parent, annotations)
+        _add_triple!(g, Triple(s, p, o))
     end
     return parent
 end
 
-add_ntps!(g, x::ObjectPropertyDomain, parent) = begin
-    s = add_ntps!(g, x.ope, parent)
+_add_triple!(g, x::ObjectPropertyDomain, parent, annotations) = begin
+    s = _add_triples!(g, x.ope, parent, annotations)
     p = rdfs.domain
-    o = add_ntps!(g, x.ce, parent)
-    push!(g, Triple(s, p, o))
+    o = _add_triples!(g, x.ce, parent, annotations)
+    _add_triple!(g, Triple(s, p, o), annotations)
     return parent
 end
 
-add_ntps!(g, x::ObjectPropertyRange, parent) = begin
-    s = add_ntps!(g, x.ope, parent)
+_add_triple!(g, x::ObjectPropertyRange, parent, annotations) = begin
+    s = _add_triples!(g, x.ope, parent, annotations)
     p = rdfs.range
-    o = add_ntps!(g, x.ce, parent)
-    push!(g, Triple(s, p, o))
+    o = _add_triples!(g, x.ce, parent, annotations)
+    _add_triple!(g, Triple(s, p, o), annotations)
     return parent
 end
 
-add_ntps!(g, x::InverseObjectProperties, parent) = begin
-    s = add_ntps!(g, x.ope1, parent)
+_add_triple!(g, x::InverseObjectProperties, parent, annotations) = begin
+    s = _add_triples!(g, x.ope1, parent, annotations)
     p = owl.inverseOf
-    o = add_ntps!(g, x.ope2, parent)
-    push!(g, Triple(s, p, o))
+    o = _add_triples!(g, x.ope2, parent, annotations)
+    _add_triple!(g, Triple(s, p, o), annotations)
     return parent
 end
 
-add_ntps!(g, x::FunctionalObjectProperty, parent) = begin
-    s = add_ntps!(g, x.ope, parent)
+_add_triple!(g, x::FunctionalObjectProperty, parent, annotations) = begin
+    s = _add_triples!(g, x.ope, parent, annotations)
     p = rdf.type
     o = owl.FunctionalProperty
-    push!(g, Triple(s, p, o))
+    _add_triple!(g, Triple(s, p, o), annotations)
     return parent
 end
 
-add_ntps!(g, x::InverseFunctionalObjectProperty, parent) = begin
-    s = add_ntps!(g, x.ope, parent)
+_add_triple!(g, x::InverseFunctionalObjectProperty, parent, annotations) = begin
+    s = _add_triples!(g, x.ope, parent, annotations)
     p = rdf.type
     o = owl.InverseFunctionalProperty
-    push!(g, Triple(s, p, o))
+    _add_triple!(g, Triple(s, p, o), annotations)
     return parent
 end
 
-add_ntps!(g, x::ReflexiveObjectProperty, parent) = begin
-    s = add_ntps!(g, x.ope, parent)
+_add_triple!(g, x::ReflexiveObjectProperty, parent, annotations) = begin
+    s = _add_triples!(g, x.ope, parent, annotations)
     p = rdf.type
     o = owl.ReflexiveProperty
-    push!(g, Triple(s, p, o))
+    _add_triple!(g, Triple(s, p, o), annotations)
     return parent
 end
 
-add_ntps!(g, x::IrreflexiveObjectProperty, parent) = begin
-    s = add_ntps!(g, x.ope, parent)
+_add_triple!(g, x::IrreflexiveObjectProperty, parent, annotations) = begin
+    s = _add_triples!(g, x.ope, parent, annotations)
     p = rdf.type
     o = owl.IrreflexiveProperty
-    push!(g, Triple(s, p, o))
+    _add_triple!(g, Triple(s, p, o), annotations)
     return parent
 end
 
-add_ntps!(g, x::SymmetricObjectProperty, parent) = begin
-    s = add_ntps!(g, x.ope, parent)
+_add_triple!(g, x::SymmetricObjectProperty, parent, annotations) = begin
+    s = _add_triples!(g, x.ope, parent, annotations)
     p = rdf.type
     o = owl.SymmetricProperty
-    push!(g, Triple(s, p, o))
+    _add_triple!(g, Triple(s, p, o), annotations)
     return parent
 end
 
-add_ntps!(g, x::AsymmetricObjectProperty, parent) = begin
-    s = add_ntps!(g, x.ope, parent)
+_add_triple!(g, x::AsymmetricObjectProperty, parent, annotations) = begin
+    s = _add_triples!(g, x.ope, parent, annotations)
     p = rdf.type
     o = owl.AsymmetricProperty
-    push!(g, Triple(s, p, o))
+    _add_triple!(g, Triple(s, p, o), annotations)
     return parent
 end
 
-add_ntps!(g, x::TransitiveObjectProperty, parent) = begin
-    s = add_ntps!(g, x.ope, parent)
+_add_triple!(g, x::TransitiveObjectProperty, parent, annotations) = begin
+    s = _add_triples!(g, x.ope, parent, annotations)
     p = rdf.type
     o = owl.TransitiveProperty
-    push!(g, Triple(s, p, o))
+    _add_triple!(g, Triple(s, p, o), annotations)
     return parent
 end
 
-add_ntps!(g, x::SubDataPropertyOf, parent) = begin
-    s = add_ntps!(g, x.dpe1, parent)
+_add_triple!(g, x::SubDataPropertyOf, parent, annotations) = begin
+    s = _add_triples!(g, x.dpe1, parent, annotations)
     p = rdfs.subPropertyOf
-    o = add_ntps!(g, x.dpe2, parent)
-    push!(g, Triple(s, p, o))
+    o = _add_triples!(g, x.dpe2, parent, annotations)
+    _add_triple!(g, Triple(s, p, o), annotations)
     return parent
 end
 
-add_ntps!(g, x::EquivalentDataProperties, parent) = begin
+_add_triple!(g, x::EquivalentDataProperties, parent, annotations) = begin
     for i in eachindex(x.dpe_n)
         if i == length(x.dpe_n)
             # last
             if i % 2 == 1
-                s = add_ntps!(g, x.dpe_n[i-1], parent)
+                s = _add_triples!(g, x.dpe_n[i-1], parent, annotations)
                 p = owl.equivalentProperty
-                o = add_ntps!(g, x.dpe_n[i], parent)
-                push!(g, Triple(s, p, o))
+                o = _add_triples!(g, x.dpe_n[i], parent, annotations)
+                _add_triple!(g, Triple(s, p, o), annotations)
             end
         else
-            s = add_ntps!(g, x.dpe_n[i], parent)
+            s = _add_triples!(g, x.dpe_n[i], parent, annotations)
             p = owl.equivalentProperty
-            o = add_ntps!(g, x.dpe_n[i+1], parent)
-            push!(g, Triple(s, p, o))
+            o = _add_triples!(g, x.dpe_n[i+1], parent, annotations)
+            _add_triple!(g, Triple(s, p, o), annotations)
         end
     end
     return parent
 end
 
-add_ntps!(g, x::DisjointDataProperties, parent) = begin
+_add_triple!(g, x::DisjointDataProperties, parent, annotations) = begin
     if length(x.dpe_n) > 2
         id1 = blank_node_id()
         id2 = blank_node_id()
-        push!(g, Triple(id1, rdf.type, owl.AllDisjointProperty))
-        push!(g, (id1, owl.members, id2))
-        add_ntps!(g, x.dpe_n, id2)
+        _add_triple!(g, Triple(id1, rdf.type, owl.AllDisjointProperty), annotations)
+        _add_triple!(g, Triple(id1, owl.members, id2), annotations)
+        _add_triples!(g, x.dpe_n, id2, annotations)
     else
-        s = add_ntps!(g, x.dpe_n[1], parent)
+        s = _add_triples!(g, x.dpe_n[1], parent, annotations)
         p = owl.propertyDisjointWith
-        o = add_ntps!(g, x.dpe_n[2], parent)
-        push!(g, Triple(s, p, o))
+        o = _add_triples!(g, x.dpe_n[2], parent, annotations)
+        _add_triple!(g, Triple(s, p, o), annotations)
     end
     return parent
 end
 
-add_ntps!(g, x::DataPropertyDomain, parent) = begin
-    s = add_ntps!(g, x.dpe, parent)
+_add_triple!(g, x::DataPropertyDomain, parent, annotations) = begin
+    s = _add_triples!(g, x.dpe, parent, annotations)
     p = rdfs.domain
-    o = add_ntps!(g, x.ce, parent)
-    push!(g, Triple(s, p, o))
+    o = _add_triples!(g, x.ce, parent, annotations)
+    _add_triple!(g, Triple(s, p, o), annotations)
     return parent
 end
 
-add_ntps!(g, x::DataPropertyRange, parent) = begin
-    s = add_ntps!(g, x.dpe, parent)
+_add_triple!(g, x::DataPropertyRange, parent, annotations) = begin
+    s = _add_triples!(g, x.dpe, parent, annotations)
     p = rdfs.range
-    o = add_ntps!(g, x.dr, parent)
-    push!(g, Triple(s, p, o))
+    o = _add_triples!(g, x.dr, parent, annotations)
+    _add_triple!(g, Triple(s, p, o), annotations)
     return parent
 end
 
-add_ntps!(g, x::FunctionalDataProperty, parent) = begin
-    s = add_ntps!(g, x.dpe, parent)
+_add_triple!(g, x::FunctionalDataProperty, parent, annotations) = begin
+    s = _add_triples!(g, x.dpe, parent, annotations)
     p = rdf.type
     o = owl.FunctionalProperty
-    push!(g, Triple(s, p, o))
+    _add_triple!(g, Triple(s, p, o), annotations)
     return parent
 end
 
-add_ntps!(g, x::DatatypeDefinition, parent) = begin
-    s = add_ntps!(g, x.dt, parent)
+_add_triple!(g, x::DatatypeDefinition, parent, annotations) = begin
+    s = _add_triples!(g, x.dt, parent, annotations)
     p = owl.equivalentClass
-    o = add_ntps!(g, x.dr, parent)
-    push!(g, Triple(s, p, o))
+    o = _add_triples!(g, x.dr, parent, annotations)
+    _add_triple!(g, Triple(s, p, o), annotations)
     return parent
 end
 
-add_ntps!(g, x::HasKey, parent) = begin
+_add_triple!(g, x::HasKey, parent, annotations) = begin
     id = blank_node_id()
-    s = add_ntps!(g, x.ce, parent)
+    s = _add_triples!(g, x.ce, parent, annotations)
     p = owl.hasKey
     o = id
-    push!(g, Triple(s, p, o))
+    _add_triple!(g, Triple(s, p, o), annotations)
     list = Vector()
     for ope in x.ope_n
         push!(list, ope)
@@ -599,125 +630,126 @@ add_ntps!(g, x::HasKey, parent) = begin
     for dpe in x.dpe_n
         push!(list, dpe)
     end
-    add_ntps!(g, list, id)
+    _add_triples!(g, list, id, annotations)
 end
 
-add_ntps!(g, x::SameIndividual, parent) = begin
+_add_triple!(g, x::SameIndividual, parent, annotations) = begin
     for a in x.a_n
         if i == length(x.a_n)
             # last
             if i % 2 == 1
-                s = add_ntps!(g, x.a_n[i-1], parent)
+                s = _add_triples!(g, x.a_n[i-1], parent, annotations)
                 p = owl.sameAs
-                o = add_ntps!(g, x.a_n[i], parent)
-                push!(g, Triple(s, p, o))
+                o = _add_triples!(g, x.a_n[i], parent, annotations)
+                _add_triple!(g, Triple(s, p, o), annotations)
             end
         else
-            s = add_ntps!(g, x.a_n[i], parent)
+            s = _add_triples!(g, x.a_n[i], parent, annotations)
             p = owl.sameAs
-            o = add_ntps!(g, x.a_n[i+1], parent)
-            push!(g, Triple(s, p, o))
+            o = _add_triples!(g, x.a_n[i+1], parent, annotations)
+            _add_triple!(g, Triple(s, p, o), annotations)
         end
     end
     return parent
 end
 
-add_ntps!(g, x::DifferentIndividuals, parent) = begin
+_add_triple!(g, x::DifferentIndividuals, parent, annotations) = begin
     if length(x.a_n) > 2
         id1 = blank_node_id()
         id2 = blank_node_id()
-        push!(g, Triple(id1, rdf.type, owl.AllDifferent))
-        push!(g, Triple(id1, owl.members, id2))
-        add_ntps!(g, x.a_n, id2)
+        _add_triple!(g, Triple(id1, rdf.type, owl.AllDifferent), annotations)
+        _add_triple!(g, Triple(id1, owl.members, id2), annotations)
+        _add_triples!(g, x.a_n, id2, annotations)
     else
-        s = add_ntps!(g, x.a_n[1], parent)
+        s = _add_triples!(g, x.a_n[1], parent, annotatioins)
         p = owl.differentFrom
-        o = add_ntps!(g, x.a_n[2], parent)
-        push!(g, Triple(s, p, o))
+        o = _add_triples!(g, x.a_n[2], parent, annotations)
+        _add_triple!(g, Triple(s, p, o), annotations)
     end
     return parent
 end
 
-add_ntps!(g, x::ClassAssertion, parent) = begin
-    s = add_ntps!(g, x.a, parent)
+_add_triple!(g, x::ClassAssertion, parent, annotations) = begin
+    s = _add_triples!(g, x.a, parent, annotations)
     p = rdf.type
-    o = add_ntps!(g, x.ce, parent)
-    push!(g, Triple(s, p, o))
+    o = _add_triples!(g, x.ce, parent, annotations)
+    _add_triple!(g, Triple(s, p, o), annotations)
     return parent
 end
 
-add_ntps!(g, x::ObjectPropertyAssertion, parent) = begin
-    s = add_ntps!(g, x.a1, parent)
-    p = add_ntpls!(g, x.ope, parent)
-    o = add_ntps!(g, x.a2, parent)
-    push!(g, Triple(s, p, o))
+_add_triple!(g, x::ObjectPropertyAssertion, parent, annotations) = begin
+    s = _add_triples!(g, x.a1, parent, annotations)
+    p = _add_triples!(g, x.ope, parent, annotations)
+    o = _add_triples!(g, x.a2, parent, annotations)
+    _add_triple!(g, Triple(s, p, o), annotations)
     return parent
 end
 
-add_ntps!(g, x::NegativeObjectPropertyAssertion, parent) = begin
+_add_triple!(g, x::NegativeObjectPropertyAssertion, parent, annotations) = begin
     id = blank_node_id()
-    a1 = add_ntps!(g, x.a1, parent)
-    ope = add_ntps!(g, x.ope, parent)
-    a2 = add_ntps!(g, x.a2, parent)
-    push!(g, Triple(id, rdf.type, owl.NegativePropertyAssertion))
-    push!(g, Triple(id, owl.sourceIndividual, a1))
-    push!(g, Triple(id, owl.assertionProperty, ope))
-    push!(g, Triple(id, owl.targetIndividual, a2))
+    a1 = _add_triples!(g, x.a1, parent, annotations)
+    ope = _add_triples!(g, x.ope, parent, annotations)
+    a2 = _add_triples!(g, x.a2, parent, annotations)
+    _add_triple!(g, Triple(id, rdf.type, owl.NegativePropertyAssertion), annotations)
+    _add_triple!(g, Triple(id, owl.sourceIndividual, a1), annotations)
+    _add_triple!(g, Triple(id, owl.assertionProperty, ope), annotations)
+    _add_triple!(g, Triple(id, owl.targetIndividual, a2), annotations)
     return id
 end
 
-add_ntps!(g, x::DataPropertyAssertion, parent) = begin
-    s = add_ntps!(g, x.a, parent)
-    p = add_ntps!(g, x.dpe, parent)
-    o = add_ntps!(g, x.lt, parent)
-    push!(g, Triple(s, p, o))
+_add_triple!(g, x::DataPropertyAssertion, parent, annotations) = begin
+    s = _add_triples!(g, x.a, parent, annotations)
+    p = _add_triples!(g, x.dpe, parent, annotations)
+    o = _add_triples!(g, x.lt, parent, annotations)
+    _add_triple!(g, Triple(s, p, o), annotations)
     return parent
 end
 
-add_ntps!(g, x::NegativeDataPropertyAssertion, parent) = begin
+_add_triple!(g, x::NegativeDataPropertyAssertion, parent, annotations) = begin
     id = blank_node_id()
-    a = add_ntps!(g, x.a, parent)
-    dpe = add_ntps!(g, x.dpe, parent)
-    value = add_ntps!(g, x.lt, parent)
-    push!(g, Triple(id, rdf.type, owl.NegativePropertyAssertion))
-    push!(g, Triple(id, owl.sourceIndividual, a1))
-    push!(g, Triple(id, owl.assertionProperty, dpe))
-    push!(g, Triple(id, owl.targetValue, value))
+    a = _add_triples!(g, x.a, parent, annotations)
+    dpe = _add_triples!(g, x.dpe, parent, annotations)
+    value = _add_triples!(g, x.lt, parent, annotations)
+    _add_triple!(g, Triple(id, rdf.type, owl.NegativePropertyAssertion), annotations)
+    _add_triple!(g, Triple(id, owl.sourceIndividual, a), annotations)
+    _add_triple!(g, Triple(id, owl.assertionProperty, dpe), annotations)
+    _add_triple!(g, Triple(id, owl.targetValue, value), annotations)
     return id
 end
 
-add_ntps!(g, x::AnnotationAssertion, parent) = begin
-    s = add_ntps!(g, x.ap, parent)
+_add_triple!(g, x::AnnotationAssertion, parent, annotations) = begin
+    s = _add_triples!(g, x.ap, parent, annotations)
     p = x.as
     o = x.av
-    push!(g, Triple(s, p, o))
+    _add_triple!(g, Triple(s, p, o), annotations)
     return parent
 end
 
-add_ntps!(g, x::SubAnnotationPropertyOf, parent) = begin
-    s = add_ntps!(g, x.ap1, parent)
+_add_triple!(g, x::SubAnnotationPropertyOf, parent, annotations) = begin
+    s = _add_triples!(g, x.ap1, parent, annotations)
     p = rdfs.subPropertyOf
-    o = add_ntps!(g, x.ap2, parent)
-    push!(g, Triple(s, p, o))
+    o = _add_triples!(g, x.ap2, parent, annotations)
+    _add_triple!(g, Triple(s, p, o), annotations)
     return parent
 end
 
-add_ntps!(g, x::AnnotationPropertyDomain, parent) = begin
-    s = add_ntps!(g, x.ap, parent)
+_add_triple!(g, x::AnnotationPropertyDomain, parent, annotations) = begin
+    s = _add_triples!(g, x.ap, parent, annotations)
     p = rdfs.domain
     o = u
-    push!(g, Triple(s, p, o))
+    _add_triple!(g, Triple(s, p, o), annotations)
     return parent
 end
 
-add_ntps!(g, x::AnnotationPropertyRange, parent) = begin
-    s = add_ntps!(g, x.ap, parent)
+_add_triple!(g, x::AnnotationPropertyRange, parent, annotations) = begin
+    s = _add_triples!(g, x.ap, parent, annotations)
     p = rdfs.range
     o = u
-    push!(g, Triple(s, p, o))
+    _add_triple!(g, Triple(s, p, o), annotations)
     return parent
 end
 
 function blank_node_id()
-    return BlankNode(rand(UInt32))
+    global _id_rotation += 1
+    return BlankNode(_id_rotation)
 end

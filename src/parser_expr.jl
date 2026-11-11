@@ -175,7 +175,7 @@ function _parse_one_of!(g, decls, exprs, t)
         a_n = Individual[]
         if t.object isa BlankNode
             terms = RDFTerm[]
-            parse_chain_list!(g, t.object, terms)
+            _parse_chain_list!(g, t.object, terms)
             for term in terms
                 a = get(decls, term, Individual(term))
                 push!(a_n, a)
@@ -187,7 +187,7 @@ function _parse_one_of!(g, decls, exprs, t)
         lt_n = Literal[]
         if t.object isa BlankNode
             terms = RDFTerm[]
-            parse_chain_list!(g, t.object, terms)
+            _parse_chain_list!(g, t.object, terms)
             for term in terms
                 push!(lt_n, Literal(term))
             end
@@ -474,7 +474,7 @@ function _parse_with_restrictions!(g, decls, exprs, t)
     lt_n = Literal[]
     if t.object isa BlankNode
         terms = RDFTerm[]
-        parse_chain_list!(g, t.object, terms)
+        _parse_chain_list!(g, t.object, terms)
         for term in terms
             if term isa BlankNode
                 for n in match(g; subject = term)
@@ -537,7 +537,7 @@ function _data_on_properties(g, decls, t)
     dpe_n = DPExpression[]
     if prop.object isa BlankNode
         terms = RDFTerm[]
-        parse_chain_list!(g, prop.object, terms)
+        _parse_chain_list!(g, prop.object, terms)
         for term in terms
             dpe = get(decls, term, DataProperty(term))
             push!(dpe_n, dpe)
@@ -556,7 +556,7 @@ function _sequence_of_class_expressions(g, decls, node)
     ce_n = CExpression[]
     if node isa BlankNode
         terms = RDFTerm[]
-        parse_chain_list!(g, node, terms)
+        _parse_chain_list!(g, node, terms)
         for term in terms
             ce = get(decls, term, Class(term))
             push!(ce_n, ce)
@@ -573,7 +573,7 @@ function _sequence_of_data_ranges(g, decls, node)
     dr_n = DataRange[]
     if node isa BlankNode
         terms = RDFTerm[]
-        parse_chain_list!(g, node, terms)
+        _parse_chain_list!(g, node, terms)
         for term in terms
             dr = get(decls, term, DataType(term))
             push!(dr_n, dr)

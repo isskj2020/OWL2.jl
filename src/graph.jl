@@ -1,14 +1,22 @@
-using Random, RDF, EzXML
+using Random, RDF, EzXML, HTTP
 
+_open_owl(f, uri) = begin
+    if startswith(uri, "http://") || startswith(uri, "https://")
+        res = HTTP.get(uri)
+        f(IOBuffer(res.body))
+    else
+        open(f, realpath(uri))
+    end
+end
 
-function _parse_owl!(filepath, mimetype)
+function _parse_owl!(uri, mimetype)
     decls = Dict{RDFTerm, Any}()
     exprs = Dict{RDFTerm, Any}()
     axioms = Vector{Axiom}()
 
     decls[owl.Thing] = Class(owl.Thing)
 
-    return open(realpath(filepath)) do io
+    return _open_owl(uri) do io
         g = read(io, MIME(mimetype), Graph)
 
         normalise_graph!(g)

@@ -5,22 +5,22 @@ Simple OWL2 type parser for Julia.
 ## DependsOn
 
 - [RDF.jl](https://github.com/mthelm85/RDF.jl)
+- [HTTP.jl](https://github.com/JuliaWeb/HTTP.jl)
+- [EzXML](https://github.com/JuliaIO/EzXML.jl)
 
 ## How to
 ```julia
 using OWL2
 
 # load RDF/XML
-ontology = OWL2.load_owl("./sample.xml")
+ontology = OWL2.load_owl("./sample.xml"; mimetype = "application/rdf+xml")
 @info "ontology IRI" ontology.iri
 @info "ontology version" ontology.version
 for axiom in ontology.axioms
     @info axiom
 end
 
-write_owl(axioms, "./out.ttl")
-
-axioms = OWL2.load_owl("./out.ttl")
+OWL2.write_owl(axioms, "./out.ttl"; mimetype = "application/n-triples")
 ```
 
 ## Support axioms

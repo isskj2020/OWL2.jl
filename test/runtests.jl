@@ -1,5 +1,6 @@
-using OWL2, Test
+using Test
 
-@testset "All Tests" begin
-    include("benchmark_test.jl")
+@testset "OWL2" begin
+    include("test_io.jl")
 end
+

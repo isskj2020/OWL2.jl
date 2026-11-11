@@ -40,7 +40,15 @@ function _parse_sub_class_of!(g, decls, exprs, axioms, t)
     t.predicate == rdfs.subClassOf || return
 
     ce1 = get(exprs, t.subject, get(decls, t.subject, nothing))
+    if ce1 == nothing
+        ce1 = Class(t.subject)
+        decls[t.subject] = ce1
+    end
     ce2 = get(exprs, t.object, get(decls, t.object, nothing))
+    if ce2 == nothing
+        ce2 = Class(t.subject)
+        decls[t.subject] = ce2
+    end
     if ce1 isa CExpression && ce2 isa CExpression
         push!(axioms, SubClassOf(ce1 = ce1, ce2 = ce2)) 
     else
@@ -106,7 +114,7 @@ function _parse_all_disjoint_classes!(g, decls, exprs, axioms, t)
     ce_n = CExpression[]
     if members.object isa BlankNode
         terms = RDFTerm[]
-        parse_chain_list!(g, members.object, terms)
+        _parse_chain_list!(g, members.object, terms)
         for term in terms
             ce = get(exprs, term, get(decls, term, Class(term)))
             push!(ce_n, ce)
@@ -132,7 +140,7 @@ function _parse_disjoint_union_of!(g, decls, exprs, axioms, t)
     ce_n = CExpression[]
     if t.object isa BlankNode
         terms = RDFTerm[]
-        parse_chain_list!(g, t.object, terms)
+        _parse_chain_list!(g, t.object, terms)
         for term in terms
             ce = get(exprs, term, get(decls, term, Class(term)))
             push!(ce_n, ce)
@@ -193,7 +201,7 @@ function _parse_property_chain_axiom!(g, decls, exprs, axioms, t)
     ope_n = OPExpression[]
     if t.object isa BlankNode
         terms = RDFTerm[]
-        parse_chain_list!(g, t.object, terms)
+        _parse_chain_list!(g, t.object, terms)
         for term in terms
             op = get(exprs, term, get(decls, term, ObjectProperty(term)))
             push!(ope_n, ObjectProperty(term))
@@ -331,7 +339,7 @@ function _parse_has_key!(g, decls, exprs, axioms, t)
     ce = get(exprs, t.subject, get(decls, t.subject, Class(t.subject)))
     if t.object isa BlankNode
         terms = RDFTerm[]
-        parse_chain_list!(g, t.object, terms)
+        _parse_chain_list!(g, t.object, terms)
         ope_n = Vector{OPExpression}()
         dpe_n = Vector{DPExpression}()
         for term in terms
@@ -382,7 +390,7 @@ function _parse_all_different!(g, decls, exprs, axioms, t)
     a_n = Individual[]
     if members.object isa BlankNode
         terms = RDFTerm[]
-        parse_chain_list!(g, members.object, terms)
+        _parse_chain_list!(g, members.object, terms)
         for term in terms
             a = get(decls, term, Individual(term))
             push!(a_n, a)

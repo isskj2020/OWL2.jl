@@ -5,6 +5,7 @@ authors = ["Issei.K <kaji.issei2020@gmail.com>"]
 
 [deps]
 EzXML = "8f5d6c58-4d21-5cfd-889c-e3ad7ee6a615"
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
 RDF = "3fbc022c-18f7-42fc-beaf-ca56153ab0b3"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
@@ -13,6 +14,7 @@ RDF = {rev = "main", url = "https://github.com/mthelm85/RDF.jl.git"}
 
 [compat]
 EzXML = "1.2.3"
+HTTP = "2.15.2"
 RDF = "0.1.0"
 Random = "1.11.0"
 Test = "1.11.0"

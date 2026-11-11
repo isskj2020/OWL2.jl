@@ -12,7 +12,7 @@ function _parse_declaration!(g, decls, axioms)
             d isa AnnotationProperty ||
             d isa Individual
             if !(d.x isa BlankNode)
-                push!(axioms, Declaration(e = d))
+                push!(axioms, Declaration(ann_n = [], e = d))
             end
         end
     end

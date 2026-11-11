@@ -21,8 +21,12 @@ include("normaliser_axiom.jl")
 include("owl_writer.jl")
 include("ntriple_writer.jl")
 
-function load_owl(filepath; mimetype::String = "application/rdf+xml")
-    return _parse_owl!(filepath, mimetype)
+manchester_syntax(x) = _fms(x)
+
+export manchester_syntax
+
+function load_owl(uri; mimetype::String = "application/rdf+xml")
+    return _parse_owl!(uri, mimetype)
 end
 
 function write_owl(ontology, filepath; type::Symbol = :nt)
