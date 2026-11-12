@@ -1,4 +1,4 @@
-using OWL2, Test, HTTP, RDF
+using OWL2, Test, RDF
 
 function match_test(uri; mimetype::String)
     output_dir = joinpath(@__DIR__, "build")

@@ -490,3 +490,15 @@ end
 _fms(o::AnnotationPropertyRange) = join([_fms(o.ap), "Range:", _fms(o.ann_n), _fms(o.u)], " ")
 
 _fms(o::Vector{Axiom}) = map(x -> _fms(x), o)
+
+function RDF.annotate!(o::Axiom, k::RDFTerm, v::RDFTerm)
+    if hasproperty(o, :ann_n)
+        for i in eachindex(o.ann_n)
+            if o.ann_n[i].ap.x == k
+                o.ann_n[i].av = v
+                return
+            end
+        end
+        push!(o.ann_n, Annotation(AnnotationProperty(k), v))
+    end
+end

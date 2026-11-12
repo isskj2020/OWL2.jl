@@ -9,7 +9,7 @@ _add_triple!(g, t::Triple, annotations) = begin
         push!(g, t)
     else
         for ann in annotations
-            annotate!(g, t, ann.ap, ann.av)
+            annotate!(g, t, ann.ap.x, ann.av)
         end
     end
 end
@@ -125,9 +125,9 @@ end
 _add_triple!(g, x::ObjectAllValuesFrom, parent, annotations) = begin
     id = blank_node_id()
     _add_triple!(g, Triple(id, rdf.type, owl.Restriction), annotations)
-    o = _add_triples!(g, x.ope, id)
+    o = _add_triples!(g, x.ope, id, annotations)
     _add_triple!(g, Triple(id, owl.onProperty, o), annotations)
-    o = _add_triples!(g, x.ce, id)
+    o = _add_triples!(g, x.ce, id, annotations)
     _add_triple!(g, Triple(id, owl.allValuesFrom, o), annotations)
     return id
 end
@@ -135,9 +135,9 @@ end
 _add_triple!(g, x::ObjectHasValue, parent, annotations) = begin
     id = blank_node_id()
     _add_triple!(g, Triple(id, rdf.type, owl.Restriction), annotations)
-    o = _add_triples!(g, x.ope, id)
+    o = _add_triples!(g, x.ope, id, annotations)
     _add_triple!(g, Triple(id, owl.onProperty, o), annotations)
-    o = _add_triples!(g, x.a, id)
+    o = _add_triples!(g, x.a, id, annotations)
     _add_triple!(g, Triple(id, owl.hasValue, o), annotations)
     return id
 end
@@ -145,7 +145,7 @@ end
 _add_triple!(g, x::ObjectHasSelf, parent, annotations) = begin
     id = blank_node_id()
     _add_triple!(g, Triple(id, rdf.type, owl.Restriction), annotations)
-    o = _add_triples!(g, x.ope, id)
+    o = _add_triples!(g, x.ope, id, annotations)
     _add_triple!(g, Triple(id, owl.onProperty, o), annotations)
     o = RDF.Literal(true)
     _add_triple!(g, Triple(id, owl.hasSelf, o), annotations)
@@ -155,7 +155,7 @@ end
 _add_triple!(g, x::ObjectMinCardinality, parent, annotations) = begin
     id = blank_node_id()
     _add_triple!(g, Triple(id, rdf.type, owl.Restriction), annotations)
-    o = _add_triples!(g, x.ope, id)
+    o = _add_triples!(g, x.ope, id, annotations)
     _add_triple!(g, Triple(id, owl.onProperty, o), annotations)
     if x.ce == nothing
         o = RDF.Literal(x.n)
